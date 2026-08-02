@@ -3,49 +3,75 @@
 // AMMEF 2.3 Container Reader and Writer
 // ======================================================
 
-const AMMEF_MAGIC = "AMMEF";
+const AMMEF_MAGIC =
+    "AMMEF";
 
-const AMMEF_LEGACY_VERSION = "1.0";
-const AMMEF_DUAL_TRACK_VERSION = "2.0";
-const AMMEF_THREE_TRACK_VERSION = "2.1";
-const AMMEF_MEDIA_VERSION = "2.3";
+const AMMEF_MEDIA_VERSION =
+    "2.3";
 
-const AMMEF_DUAL_TRACK_MARKER = 0x02;
-const AMMEF_THREE_TRACK_MARKER = 0x03;
-const AMMEF_MEDIA_MARKER = 0x04;
+const AMMEF_MEDIA_MARKER =
+    0x04;
 
 /*
- * AMMEF 2.3 layout
+ * AMMEF 2.3 binary layout
  *
- * Bytes 0–4:   "AMMEF"
- * Byte 5:      0x04
+ * Bytes 0–4:
+ *     ASCII "AMMEF"
  *
- * Bytes 6–9:   metadata JSON length
- * Bytes 10–13: clean audio length
- * Bytes 14–17: general FM monitor length
- * Bytes 18–21: telemetry audio length
- * Bytes 22–25: video ABMTV monitor length
- * Bytes 26–29: photo ABMTV monitor length
- * Bytes 30–33: original compressed video length
- * Bytes 34–37: original compressed photo length
+ * Byte 5:
+ *     Version marker 0x04
  *
- * Bytes 38+: metadata JSON
- *            clean WAV
- *            general monitor WAV
- *            telemetry WAV
- *            video-monitor WAV
- *            photo-monitor WAV
- *            original compressed video
- *            original compressed photo
+ * Bytes 6–9:
+ *     Metadata JSON length
+ *
+ * Bytes 10–13:
+ *     Clean audio length
+ *
+ * Bytes 14–17:
+ *     FM monitor audio length
+ *
+ * Bytes 18–21:
+ *     Telemetry audio length
+ *
+ * Bytes 22–25:
+ *     Video-monitor audio length
+ *
+ * Bytes 26–29:
+ *     Photo-monitor audio length
+ *
+ * Bytes 30–33:
+ *     Original video length
+ *
+ * Bytes 34–37:
+ *     Original photo length
+ *
+ * Bytes 38+:
+ *     Metadata JSON
+ *     Clean WAV
+ *     FM monitor WAV
+ *     Telemetry WAV
+ *     Video-monitor WAV
+ *     Photo-monitor WAV
+ *     Original video
+ *     Original photo
  */
 
-const AMMEF_MEDIA_HEADER_LENGTH = 38;
+const AMMEF_MEDIA_HEADER_LENGTH =
+    38;
 
 // ======================================================
 // Basic helpers
 // ======================================================
 
-function hasAMMEFHeader(data) {
+/**
+ * Checks whether a byte array begins with "AMMEF".
+ *
+ * @param {Uint8Array} data
+ * @returns {boolean}
+ */
+function hasAMMEFHeader(
+    data
+) {
     return (
         data instanceof Uint8Array &&
         data.length >= 5 &&
@@ -57,9 +83,23 @@ function hasAMMEFHeader(data) {
     );
 }
 
-async function blobToBytes(blob) {
-    if (!(blob instanceof Blob)) {
-        return new Uint8Array(0);
+/**
+ * Converts a Blob into bytes.
+ *
+ * Null or missing blobs become an empty byte array.
+ *
+ * @param {Blob|null} blob
+ * @returns {Promise<Uint8Array>}
+ */
+async function blobToBytes(
+    blob
+) {
+    if (
+        !(blob instanceof Blob)
+    ) {
+        return new Uint8Array(
+            0
+        );
     }
 
     return new Uint8Array(
@@ -67,17 +107,31 @@ async function blobToBytes(blob) {
     );
 }
 
+/**
+ * Creates a Blob from a range inside an AMMEF byte array.
+ *
+ * @param {Uint8Array} data
+ * @param {number} start
+ * @param {number} length
+ * @param {string} mimeType
+ * @returns {Blob|null}
+ */
 function createPayloadBlob(
     data,
     start,
     length,
     mimeType
 ) {
-    if (!length) {
+    if (
+        !Number.isFinite(length) ||
+        length <= 0
+    ) {
         return null;
     }
 
-    const end = start + length;
+    const end =
+        start +
+        length;
 
     if (
         start < 0 ||
@@ -90,7 +144,12 @@ function createPayloadBlob(
     }
 
     return new Blob(
-        [data.slice(start, end)],
+        [
+            data.slice(
+                start,
+                end
+            )
+        ],
         {
             type:
                 mimeType ||
@@ -99,8 +158,19 @@ function createPayloadBlob(
     );
 }
 
-function sanitizeDownloadName(value) {
-    return String(value || "")
+/**
+ * Makes a safe filename component.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function sanitizeDownloadName(
+    value
+) {
+    return String(
+        value ||
+        ""
+    )
         .trim()
         .replace(
             /[^A-Za-z0-9_.-]/g,
@@ -108,17 +178,126 @@ function sanitizeDownloadName(value) {
         );
 }
 
+/**
+ * Returns the first valid Blob in the supplied list.
+ *
+ * @param  {...any} values
+ * @returns {Blob|null}
+ */
+function firstValidBlob(
+    ...values
+) {
+    for (
+        const value of
+        values
+    ) {
+        if (
+            value instanceof Blob
+        ) {
+            return value;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Reads a MIME type from AMMEF metadata.
+ *
+ * @param {object} metadata
+ * @param {string} trackName
+ * @param {string} fallback
+ * @returns {string}
+ */
+function getTrackMimeType(
+    metadata,
+    trackName,
+    fallback
+) {
+    return (
+        metadata?.tracks?.[
+            trackName
+        ]?.mimeType ||
+        fallback
+    );
+}
+
+/**
+ * Reads a filename from AMMEF metadata.
+ *
+ * @param {object} metadata
+ * @param {string} trackName
+ * @param {string|null} fallback
+ * @returns {string|null}
+ */
+function getTrackFileName(
+    metadata,
+    trackName,
+    fallback = null
+) {
+    return (
+        metadata?.tracks?.[
+            trackName
+        ]?.fileName ||
+        fallback
+    );
+}
+
 // ======================================================
-// Metadata
+// Transmission-type detection
 // ======================================================
 
-function createAMMEFMetadata(lengths) {
+/**
+ * Determines what kind of payload is currently prepared.
+ *
+ * @returns {"video"|"photo"|"voice"|"audio"}
+ */
+function determineCurrentAMMEFKind() {
+    if (
+        lastOriginalVideoBlob instanceof Blob
+    ) {
+        return "video";
+    }
+
+    if (
+        lastOriginalPhotoBlob instanceof Blob
+    ) {
+        return "photo";
+    }
+
+    if (
+        lastCleanAudioBlob instanceof Blob
+    ) {
+        return "voice";
+    }
+
+    return "audio";
+}
+
+// ======================================================
+// Metadata creation
+// ======================================================
+
+/**
+ * Builds AMMEF metadata.
+ *
+ * @param {object} lengths
+ * @param {string} transmissionKind
+ * @returns {object}
+ */
+function createAMMEFMetadata(
+    lengths,
+    transmissionKind =
+        determineCurrentAMMEFKind()
+) {
     return {
         format:
             AMMEF_MAGIC,
 
         version:
             AMMEF_MEDIA_VERSION,
+
+        transmissionKind,
 
         mode:
             comboMode.value,
@@ -130,7 +309,9 @@ function createAMMEFMetadata(lengths) {
             comboBandwidth.value,
 
         virtualFrequency:
-            Number(txtFrequency.value),
+            Number(
+                txtFrequency.value
+            ),
 
         frequencyUnit:
             "Vt",
@@ -141,12 +322,14 @@ function createAMMEFMetadata(lengths) {
                 .toUpperCase(),
 
         created:
-            new Date().toISOString(),
+            new Date()
+                .toISOString(),
 
         tracks: {
             cleanAudio: {
                 present:
-                    lengths.clean > 0,
+                    lengths.clean >
+                    0,
 
                 byteLength:
                     lengths.clean,
@@ -157,7 +340,8 @@ function createAMMEFMetadata(lengths) {
 
             fmMonitor: {
                 present:
-                    lengths.monitor > 0,
+                    lengths.monitor >
+                    0,
 
                 byteLength:
                     lengths.monitor,
@@ -168,7 +352,8 @@ function createAMMEFMetadata(lengths) {
 
             telemetry: {
                 present:
-                    lengths.telemetry > 0,
+                    lengths.telemetry >
+                    0,
 
                 byteLength:
                     lengths.telemetry,
@@ -179,7 +364,8 @@ function createAMMEFMetadata(lengths) {
 
             videoMonitor: {
                 present:
-                    lengths.videoMonitor > 0,
+                    lengths.videoMonitor >
+                    0,
 
                 byteLength:
                     lengths.videoMonitor,
@@ -188,12 +374,14 @@ function createAMMEFMetadata(lengths) {
                     "audio/wav",
 
                 metadata:
-                    lastVideoMetadata || null
+                    lastVideoMetadata ||
+                    null
             },
 
             photoMonitor: {
                 present:
-                    lengths.photoMonitor > 0,
+                    lengths.photoMonitor >
+                    0,
 
                 byteLength:
                     lengths.photoMonitor,
@@ -202,54 +390,73 @@ function createAMMEFMetadata(lengths) {
                     "audio/wav",
 
                 metadata:
-                    lastPhotoMetadata || null
+                    lastPhotoMetadata ||
+                    null
             },
 
             originalVideo: {
                 present:
-                    lengths.video > 0,
+                    lengths.video >
+                    0,
 
                 byteLength:
                     lengths.video,
 
                 fileName:
-                    lastOriginalVideoName || null,
+                    lastOriginalVideoName ||
+                    null,
 
                 mimeType:
                     lastOriginalVideoType ||
-                    lastOriginalVideoBlob?.type ||
+                    lastOriginalVideoBlob
+                        ?.type ||
                     "application/octet-stream"
             },
 
             originalPhoto: {
                 present:
-                    lengths.photo > 0,
+                    lengths.photo >
+                    0,
 
                 byteLength:
                     lengths.photo,
 
                 fileName:
-                    lastOriginalPhotoName || null,
+                    lastOriginalPhotoName ||
+                    null,
 
                 mimeType:
                     lastOriginalPhotoType ||
-                    lastOriginalPhotoBlob?.type ||
+                    lastOriginalPhotoBlob
+                        ?.type ||
                     "application/octet-stream"
             }
         }
     };
 }
 
-function applyAMMEFMetadata(metadata) {
+/**
+ * Applies AMMEF metadata to the dashboard controls.
+ *
+ * @param {object} metadata
+ */
+function applyAMMEFMetadata(
+    metadata
+) {
     if (
         !metadata ||
-        typeof metadata !== "object"
+        typeof metadata !==
+            "object"
     ) {
         return;
     }
 
     if (
-        ["AARM", "ABM", "ABMTV"].includes(
+        [
+            "AARM",
+            "ABM",
+            "ABMTV"
+        ].includes(
             metadata.mode
         )
     ) {
@@ -264,24 +471,30 @@ function applyAMMEFMetadata(metadata) {
         }
     }
 
-    if (metadata.band) {
-        const bandOption =
+    if (
+        typeof metadata.band ===
+            "string"
+    ) {
+        const optionExists =
             Array.from(
                 comboBand.options
-            ).find(
+            ).some(
                 option =>
                     option.value ===
                     metadata.band
             );
 
-        if (bandOption) {
+        if (optionExists) {
             comboBand.value =
                 metadata.band;
         }
     }
 
     if (
-        ["wide", "narrow"].includes(
+        [
+            "wide",
+            "narrow"
+        ].includes(
             metadata.bandwidth
         )
     ) {
@@ -294,79 +507,143 @@ function applyAMMEFMetadata(metadata) {
             metadata.virtualFrequency
         );
 
-    if (Number.isFinite(frequency)) {
+    if (
+        Number.isFinite(
+            frequency
+        )
+    ) {
         txtFrequency.value =
-            String(frequency);
+            String(
+                frequency
+            );
     }
 
-    if (
-        typeof metadata.callsign ===
-            "string" &&
-        metadata.callsign.trim()
-    ) {
-        txtCallsign.value =
-            metadata.callsign
-                .trim()
-                .toUpperCase();
-    }
+    /*
+     * Do not automatically overwrite the local operator's
+     * callsign when receiving another station's packet.
+     *
+     * The sending callsign remains available inside
+     * metadata.callsign.
+     */
 }
 
 // ======================================================
-// AMMEF 2.3 creation
+// AMMEF creation
 // ======================================================
 
-async function createAMMEFBlob() {
+/**
+ * Creates an AMMEF Blob from the currently prepared
+ * audio, photo, or video payloads.
+ *
+ * @param {object} options
+ * @param {string} options.transmissionKind
+ * @returns {Promise<Blob>}
+ */
+async function createAMMEFBlob(
+    options = {}
+) {
+    const requestedKind =
+        options.transmissionKind ||
+        determineCurrentAMMEFKind();
+
     /*
-     * Do not treat an ABMTV monitor waveform as clean
-     * audio merely because it is lastProcessedAudioBlob.
+     * A general audio transmission normally contains:
+     *
+     * clean audio:
+     *     Recoverable receiver audio.
+     *
+     * monitor audio:
+     *     The encoded waveform heard by the sender.
      */
-    const cleanBlob =
-        lastCleanAudioBlob ||
-        (
-            comboMode.value !== "ABMTV"
-                ? lastProcessedAudioBlob
-                : null
+    let cleanBlob =
+        firstValidBlob(
+            lastCleanAudioBlob
         );
 
     let monitorBlob =
-        lastModulatedAudioBlob ||
-        null;
+        firstValidBlob(
+            lastModulatedAudioBlob
+        );
 
     const telemetryBlob =
-        lastTelemetryAudioBlob ||
-        null;
+        firstValidBlob(
+            lastTelemetryAudioBlob
+        );
 
     const videoMonitorBlob =
-        lastVideoMonitorAudioBlob ||
-        null;
+        firstValidBlob(
+            lastVideoMonitorAudioBlob
+        );
 
     const photoMonitorBlob =
-        lastPhotoMonitorAudioBlob ||
-        null;
+        firstValidBlob(
+            lastPhotoMonitorAudioBlob
+        );
 
     const videoBlob =
-        lastOriginalVideoBlob ||
-        null;
+        firstValidBlob(
+            lastOriginalVideoBlob
+        );
 
     const photoBlob =
-        lastOriginalPhotoBlob ||
-        null;
+        firstValidBlob(
+            lastOriginalPhotoBlob
+        );
 
     /*
-     * Avoid storing the same specialized monitor twice.
+     * Morse IDENT currently has no separate clean track.
+     * Its encoded waveform may be stored in
+     * lastProcessedAudioBlob.
      */
     if (
-        monitorBlob === videoMonitorBlob ||
-        monitorBlob === photoMonitorBlob
+        requestedKind ===
+            "ident" &&
+        !monitorBlob
     ) {
-        monitorBlob = null;
+        monitorBlob =
+            firstValidBlob(
+                lastProcessedAudioBlob
+            );
+    }
+
+    /*
+     * Avoid treating a visual monitor waveform as clean
+     * voice/audio.
+     */
+    if (
+        requestedKind ===
+            "photo" ||
+        requestedKind ===
+            "video" ||
+        comboMode.value ===
+            "ABMTV"
+    ) {
+        cleanBlob =
+            null;
+    }
+
+    /*
+     * Avoid storing a specialized visual monitor twice.
+     */
+    if (
+        monitorBlob ===
+            videoMonitorBlob ||
+        monitorBlob ===
+            photoMonitorBlob
+    ) {
+        monitorBlob =
+            null;
     }
 
     const cleanBytes =
-        await blobToBytes(cleanBlob);
+        await blobToBytes(
+            cleanBlob
+        );
 
     const monitorBytes =
-        await blobToBytes(monitorBlob);
+        await blobToBytes(
+            monitorBlob
+        );
 
     const telemetryBytes =
         await blobToBytes(
@@ -384,10 +661,14 @@ async function createAMMEFBlob() {
         );
 
     const videoBytes =
-        await blobToBytes(videoBlob);
+        await blobToBytes(
+            videoBlob
+        );
 
     const photoBytes =
-        await blobToBytes(photoBlob);
+        await blobToBytes(
+            photoBlob
+        );
 
     const totalPayloadLength =
         cleanBytes.length +
@@ -398,9 +679,12 @@ async function createAMMEFBlob() {
         videoBytes.length +
         photoBytes.length;
 
-    if (totalPayloadLength === 0) {
+    if (
+        totalPayloadLength ===
+        0
+    ) {
         throw new Error(
-            "No media is available for AMMEF export."
+            "No audio or visual payload is available for AMMEF creation."
         );
     }
 
@@ -429,13 +713,17 @@ async function createAMMEFBlob() {
 
     const metadata =
         createAMMEFMetadata(
-            lengths
+            lengths,
+            requestedKind
         );
 
     const metadataBytes =
-        new TextEncoder().encode(
-            JSON.stringify(metadata)
-        );
+        new TextEncoder()
+            .encode(
+                JSON.stringify(
+                    metadata
+                )
+            );
 
     const combined =
         new Uint8Array(
@@ -449,12 +737,21 @@ async function createAMMEFBlob() {
             combined.buffer
         );
 
-    // AMMEF magic
-    combined[0] = 0x41;
-    combined[1] = 0x4D;
-    combined[2] = 0x4D;
-    combined[3] = 0x45;
-    combined[4] = 0x46;
+    // AMMEF magic: "AMMEF"
+    combined[0] =
+        0x41;
+
+    combined[1] =
+        0x4D;
+
+    combined[2] =
+        0x4D;
+
+    combined[3] =
+        0x45;
+
+    combined[4] =
+        0x46;
 
     // AMMEF 2.3 marker
     combined[5] =
@@ -511,24 +808,48 @@ async function createAMMEFBlob() {
     let offset =
         AMMEF_MEDIA_HEADER_LENGTH;
 
-    const appendBytes = bytes => {
-        combined.set(
-            bytes,
-            offset
-        );
+    const appendBytes =
+        bytes => {
+            combined.set(
+                bytes,
+                offset
+            );
 
-        offset +=
-            bytes.length;
-    };
+            offset +=
+                bytes.length;
+        };
 
-    appendBytes(metadataBytes);
-    appendBytes(cleanBytes);
-    appendBytes(monitorBytes);
-    appendBytes(telemetryBytes);
-    appendBytes(videoMonitorBytes);
-    appendBytes(photoMonitorBytes);
-    appendBytes(videoBytes);
-    appendBytes(photoBytes);
+    appendBytes(
+        metadataBytes
+    );
+
+    appendBytes(
+        cleanBytes
+    );
+
+    appendBytes(
+        monitorBytes
+    );
+
+    appendBytes(
+        telemetryBytes
+    );
+
+    appendBytes(
+        videoMonitorBytes
+    );
+
+    appendBytes(
+        photoMonitorBytes
+    );
+
+    appendBytes(
+        videoBytes
+    );
+
+    appendBytes(
+        photoBytes
+    );
 
     lastAMMEFData = {
         metadata,
@@ -551,12 +872,32 @@ async function createAMMEFBlob() {
         originalVideoBlob:
             videoBlob,
 
+        originalVideoName:
+            lastOriginalVideoName ||
+            null,
+
+        originalVideoType:
+            lastOriginalVideoType ||
+            videoBlob?.type ||
+            null,
+
         originalPhotoBlob:
-            photoBlob
+            photoBlob,
+
+        originalPhotoName:
+            lastOriginalPhotoName ||
+            null,
+
+        originalPhotoType:
+            lastOriginalPhotoType ||
+            photoBlob?.type ||
+            null
     };
 
     return new Blob(
-        [combined],
+        [
+            combined
+        ],
         {
             type:
                 "application/x-ammef"
@@ -564,6 +905,13 @@ async function createAMMEFBlob() {
     );
 }
 
+// ======================================================
+// AMMEF saving
+// ======================================================
+
+/**
+ * Saves the currently prepared media as an AMMEF file.
+ */
 async function saveAMMEFFile() {
     try {
         txtStatus.textContent =
@@ -581,7 +929,9 @@ async function saveAMMEFFile() {
             );
 
         const anchor =
-            document.createElement("a");
+            document.createElement(
+                "a"
+            );
 
         const callsign =
             sanitizeDownloadName(
@@ -636,7 +986,10 @@ async function saveAMMEFFile() {
         );
 
         txtStatus.textContent =
-            `ERROR: ${error.message}`;
+            `ERROR: ${
+                error.message ||
+                "Could not create the AMMEF file."
+            }`;
 
         txtStatus.style.color =
             "#FF3333";
@@ -647,6 +1000,13 @@ async function saveAMMEFFile() {
 // AMMEF 2.3 parsing
 // ======================================================
 
+/**
+ * Parses an AMMEF 2.3 byte array.
+ *
+ * @param {ArrayBuffer} buffer
+ * @param {Uint8Array} data
+ * @returns {object}
+ */
 function parseMediaAMMEF(
     buffer,
     data
@@ -661,7 +1021,9 @@ function parseMediaAMMEF(
     }
 
     const view =
-        new DataView(buffer);
+        new DataView(
+            buffer
+        );
 
     const metadataLength =
         view.getUint32(
@@ -722,111 +1084,160 @@ function parseMediaAMMEF(
         metadataLength;
 
     if (
-        metadataLength < 2 ||
-        metadataEnd > data.length
+        metadataLength <
+            2 ||
+        metadataEnd >
+            data.length
     ) {
         throw new Error(
-            "AMMEF 2.3 metadata length is invalid."
+            "AMMEF metadata length is invalid."
         );
     }
 
-    const metadata =
-        JSON.parse(
-            new TextDecoder().decode(
-                data.slice(
-                    metadataStart,
-                    metadataEnd
-                )
-            )
+    let metadata;
+
+    try {
+        metadata =
+            JSON.parse(
+                new TextDecoder()
+                    .decode(
+                        data.slice(
+                            metadataStart,
+                            metadataEnd
+                        )
+                    )
+            );
+    }
+    catch (error) {
+        throw new Error(
+            `AMMEF metadata JSON is invalid: ${error.message}`
         );
+    }
 
     offset =
         metadataEnd;
 
-    const readPayload = (
-        length,
-        mimeType
-    ) => {
-        const blob =
-            createPayloadBlob(
-                data,
-                offset,
-                length,
-                mimeType
-            );
+    const readPayload =
+        (
+            length,
+            mimeType
+        ) => {
+            const blob =
+                createPayloadBlob(
+                    data,
+                    offset,
+                    length,
+                    mimeType
+                );
 
-        offset +=
-            length;
+            offset +=
+                length;
 
-        return blob;
-    };
+            return blob;
+        };
 
     const cleanAudioBlob =
         readPayload(
             cleanLength,
-            "audio/wav"
+            getTrackMimeType(
+                metadata,
+                "cleanAudio",
+                "audio/wav"
+            )
         );
 
     const monitorAudioBlob =
         readPayload(
             monitorLength,
-            "audio/wav"
+            getTrackMimeType(
+                metadata,
+                "fmMonitor",
+                "audio/wav"
+            )
         );
 
     const telemetryAudioBlob =
         readPayload(
             telemetryLength,
-            "audio/wav"
+            getTrackMimeType(
+                metadata,
+                "telemetry",
+                "audio/wav"
+            )
         );
 
     const videoMonitorAudioBlob =
         readPayload(
             videoMonitorLength,
-            "audio/wav"
+            getTrackMimeType(
+                metadata,
+                "videoMonitor",
+                "audio/wav"
+            )
         );
 
     const photoMonitorAudioBlob =
         readPayload(
             photoMonitorLength,
-            "audio/wav"
+            getTrackMimeType(
+                metadata,
+                "photoMonitor",
+                "audio/wav"
+            )
         );
 
-    const videoMetadata =
-        metadata.tracks
-            ?.originalVideo ||
-        {};
+    const originalVideoType =
+        getTrackMimeType(
+            metadata,
+            "originalVideo",
+            "application/octet-stream"
+        );
 
-    const photoMetadata =
-        metadata.tracks
-            ?.originalPhoto ||
-        {};
+    const originalVideoName =
+        getTrackFileName(
+            metadata,
+            "originalVideo",
+            "ArNet_Video.bin"
+        );
 
     const originalVideoBlob =
         readPayload(
             videoLength,
-            videoMetadata.mimeType ||
+            originalVideoType
+        );
+
+    const originalPhotoType =
+        getTrackMimeType(
+            metadata,
+            "originalPhoto",
             "application/octet-stream"
+        );
+
+    const originalPhotoName =
+        getTrackFileName(
+            metadata,
+            "originalPhoto",
+            "ArNet_Photo.bin"
         );
 
     const originalPhotoBlob =
         readPayload(
             photoLength,
-            photoMetadata.mimeType ||
-            "application/octet-stream"
+            originalPhotoType
         );
 
-    if (offset !== data.length) {
+    if (
+        offset !==
+        data.length
+    ) {
         console.warn(
-            "AMMEF contains trailing bytes:",
-            data.length - offset
+            "AMMEF contains trailing or unaccounted bytes:",
+            data.length -
+            offset
         );
     }
 
     return {
-        version:
-            metadata.version ||
-            AMMEF_MEDIA_VERSION,
-
         metadata,
 
         cleanAudioBlob,
@@ -837,44 +1248,52 @@ function parseMediaAMMEF(
         photoMonitorAudioBlob,
 
         originalVideoBlob,
+        originalVideoName,
+        originalVideoType,
+
         originalPhotoBlob,
-
-        originalVideoName:
-            videoMetadata.fileName ||
-            null,
-
-        originalVideoType:
-            videoMetadata.mimeType ||
-            originalVideoBlob?.type ||
-            null,
-
-        originalPhotoName:
-            photoMetadata.fileName ||
-            null,
-
-        originalPhotoType:
-            photoMetadata.mimeType ||
-            originalPhotoBlob?.type ||
-            null
+        originalPhotoName,
+        originalPhotoType
     };
 }
 
 // ======================================================
-// Older format parsing
+// Legacy AMMEF parser
 // ======================================================
 
+/**
+ * Reads the original AMMEF format:
+ *
+ * Bytes 0–4:
+ *     "AMMEF"
+ *
+ * Bytes 5–8:
+ *     Metadata length
+ *
+ * Bytes 9+:
+ *     Metadata JSON
+ *     WAV payload
+ *
+ * @param {ArrayBuffer} buffer
+ * @param {Uint8Array} data
+ * @returns {object}
+ */
 function parseLegacyAMMEF(
     buffer,
     data
 ) {
-    if (data.length < 9) {
+    if (
+        data.length < 9
+    ) {
         throw new Error(
             "Legacy AMMEF header is incomplete."
         );
     }
 
     const view =
-        new DataView(buffer);
+        new DataView(
+            buffer
+        );
 
     const metadataLength =
         view.getUint32(
@@ -882,356 +1301,175 @@ function parseLegacyAMMEF(
             true
         );
 
-    const metadataStart = 9;
+    const metadataStart =
+        9;
 
     const metadataEnd =
         metadataStart +
         metadataLength;
 
     if (
-        metadataLength < 2 ||
-        metadataEnd > data.length
+        metadataLength <
+            2 ||
+        metadataEnd >
+            data.length
     ) {
         throw new Error(
-            "Legacy AMMEF metadata is invalid."
+            "Legacy AMMEF metadata length is invalid."
         );
     }
 
-    const metadata =
-        JSON.parse(
-            new TextDecoder().decode(
-                data.slice(
-                    metadataStart,
-                    metadataEnd
-                )
-            )
-        );
+    let metadata;
 
-    const audioLength =
-        data.length -
-        metadataEnd;
-
-    if (audioLength <= 0) {
+    try {
+        metadata =
+            JSON.parse(
+                new TextDecoder()
+                    .decode(
+                        data.slice(
+                            metadataStart,
+                            metadataEnd
+                        )
+                    )
+            );
+    }
+    catch (error) {
         throw new Error(
-            "Legacy AMMEF contains no audio."
+            `Legacy AMMEF metadata JSON is invalid: ${error.message}`
         );
     }
 
-    return {
-        version:
-            metadata.version ||
-            AMMEF_LEGACY_VERSION,
-
-        metadata,
-
-        cleanAudioBlob:
-            createPayloadBlob(
-                data,
-                metadataEnd,
-                audioLength,
-                "audio/wav"
-            ),
-
-        monitorAudioBlob: null,
-        telemetryAudioBlob: null,
-
-        videoMonitorAudioBlob: null,
-        photoMonitorAudioBlob: null,
-
-        originalVideoBlob: null,
-        originalPhotoBlob: null,
-
-        originalVideoName: null,
-        originalVideoType: null,
-
-        originalPhotoName: null,
-        originalPhotoType: null
-    };
-}
-
-function parseDualTrackAMMEF(
-    buffer,
-    data
-) {
-    const headerLength = 18;
-
-    if (data.length < headerLength) {
-        throw new Error(
-            "AMMEF 2.0 header is incomplete."
+    const wavBytes =
+        data.slice(
+            metadataEnd
         );
-    }
-
-    const view =
-        new DataView(buffer);
-
-    const metadataLength =
-        view.getUint32(6, true);
-
-    const cleanLength =
-        view.getUint32(10, true);
-
-    const monitorLength =
-        view.getUint32(14, true);
-
-    const metadataStart =
-        headerLength;
-
-    const metadataEnd =
-        metadataStart +
-        metadataLength;
-
-    const cleanStart =
-        metadataEnd;
-
-    const monitorStart =
-        cleanStart +
-        cleanLength;
-
-    const finalEnd =
-        monitorStart +
-        monitorLength;
-
-    if (finalEnd > data.length) {
-        throw new Error(
-            "AMMEF 2.0 payload lengths are invalid."
-        );
-    }
-
-    const metadata =
-        JSON.parse(
-            new TextDecoder().decode(
-                data.slice(
-                    metadataStart,
-                    metadataEnd
-                )
-            )
-        );
-
-    return {
-        version:
-            metadata.version ||
-            AMMEF_DUAL_TRACK_VERSION,
-
-        metadata,
-
-        cleanAudioBlob:
-            createPayloadBlob(
-                data,
-                cleanStart,
-                cleanLength,
-                "audio/wav"
-            ),
-
-        monitorAudioBlob:
-            createPayloadBlob(
-                data,
-                monitorStart,
-                monitorLength,
-                "audio/wav"
-            ),
-
-        telemetryAudioBlob: null,
-
-        videoMonitorAudioBlob: null,
-        photoMonitorAudioBlob: null,
-
-        originalVideoBlob: null,
-        originalPhotoBlob: null,
-
-        originalVideoName: null,
-        originalVideoType: null,
-
-        originalPhotoName: null,
-        originalPhotoType: null
-    };
-}
-
-function parseThreeTrackAMMEF(
-    buffer,
-    data
-) {
-    const headerLength = 22;
-
-    if (data.length < headerLength) {
-        throw new Error(
-            "AMMEF 2.1 header is incomplete."
-        );
-    }
-
-    const view =
-        new DataView(buffer);
-
-    const metadataLength =
-        view.getUint32(6, true);
-
-    const cleanLength =
-        view.getUint32(10, true);
-
-    const monitorLength =
-        view.getUint32(14, true);
-
-    const telemetryLength =
-        view.getUint32(18, true);
-
-    let offset =
-        headerLength;
-
-    const metadataEnd =
-        offset +
-        metadataLength;
-
-    if (metadataEnd > data.length) {
-        throw new Error(
-            "AMMEF 2.1 metadata length is invalid."
-        );
-    }
-
-    const metadata =
-        JSON.parse(
-            new TextDecoder().decode(
-                data.slice(
-                    offset,
-                    metadataEnd
-                )
-            )
-        );
-
-    offset =
-        metadataEnd;
 
     const cleanAudioBlob =
-        createPayloadBlob(
-            data,
-            offset,
-            cleanLength,
-            "audio/wav"
-        );
-
-    offset += cleanLength;
-
-    const monitorAudioBlob =
-        createPayloadBlob(
-            data,
-            offset,
-            monitorLength,
-            "audio/wav"
-        );
-
-    offset += monitorLength;
-
-    const telemetryAudioBlob =
-        createPayloadBlob(
-            data,
-            offset,
-            telemetryLength,
-            "audio/wav"
-        );
-
-    offset += telemetryLength;
-
-    if (offset > data.length) {
-        throw new Error(
-            "AMMEF 2.1 payload lengths are invalid."
-        );
-    }
+        wavBytes.length >
+            0
+            ? new Blob(
+                [
+                    wavBytes
+                ],
+                {
+                    type:
+                        "audio/wav"
+                }
+            )
+            : null;
 
     return {
-        version:
-            metadata.version ||
-            AMMEF_THREE_TRACK_VERSION,
+        metadata: {
+            ...metadata,
 
-        metadata,
+            version:
+                metadata.version ||
+                "1.0",
+
+            transmissionKind:
+                metadata.transmissionKind ||
+                "audio"
+        },
 
         cleanAudioBlob,
-        monitorAudioBlob,
-        telemetryAudioBlob,
 
-        videoMonitorAudioBlob: null,
-        photoMonitorAudioBlob: null,
+        monitorAudioBlob:
+            null,
 
-        originalVideoBlob: null,
-        originalPhotoBlob: null,
+        telemetryAudioBlob:
+            null,
 
-        originalVideoName: null,
-        originalVideoType: null,
+        videoMonitorAudioBlob:
+            null,
 
-        originalPhotoName: null,
-        originalPhotoType: null
+        photoMonitorAudioBlob:
+            null,
+
+        originalVideoBlob:
+            null,
+
+        originalVideoName:
+            null,
+
+        originalVideoType:
+            null,
+
+        originalPhotoBlob:
+            null,
+
+        originalPhotoName:
+            null,
+
+        originalPhotoType:
+            null
     };
 }
 
 // ======================================================
-// Reading and loading
+// General AMMEF reader
 // ======================================================
 
-async function readAMMEFFile(file) {
-    if (!(file instanceof Blob)) {
+/**
+ * Reads an AMMEF File or Blob.
+ *
+ * This is used for:
+ *
+ * - Local file loading
+ * - Network AMMEF reception
+ *
+ * @param {Blob} fileOrBlob
+ * @returns {Promise<object>}
+ */
+async function readAMMEFFile(
+    fileOrBlob
+) {
+    if (
+        !(fileOrBlob instanceof Blob)
+    ) {
         throw new TypeError(
             "readAMMEFFile requires a File or Blob."
         );
     }
 
     const buffer =
-        await file.arrayBuffer();
+        await fileOrBlob
+            .arrayBuffer();
 
     const data =
-        new Uint8Array(buffer);
+        new Uint8Array(
+            buffer
+        );
 
-    if (!hasAMMEFHeader(data)) {
+    if (
+        !hasAMMEFHeader(
+            data
+        )
+    ) {
         throw new Error(
-            "Invalid AMMEF file header."
+            "Invalid AMMEF header."
         );
     }
 
     let parsed;
 
+    /*
+     * AMMEF 2.3 uses the marker byte at offset 5.
+     *
+     * Legacy AMMEF places the first metadata-length byte
+     * at offset 5, so any marker other than 0x04 is
+     * treated as legacy.
+     */
     if (
+        data.length >=
+            AMMEF_MEDIA_HEADER_LENGTH &&
         data[5] ===
-        AMMEF_MEDIA_MARKER
+            AMMEF_MEDIA_MARKER
     ) {
         parsed =
             parseMediaAMMEF(
                 buffer,
                 data
             );
-    }
-    else if (
-        data[5] ===
-        AMMEF_THREE_TRACK_MARKER
-    ) {
-        try {
-            parsed =
-                parseThreeTrackAMMEF(
-                    buffer,
-                    data
-                );
-        }
-        catch (error) {
-            parsed =
-                parseLegacyAMMEF(
-                    buffer,
-                    data
-                );
-        }
-    }
-    else if (
-        data[5] ===
-        AMMEF_DUAL_TRACK_MARKER
-    ) {
-        try {
-            parsed =
-                parseDualTrackAMMEF(
-                    buffer,
-                    data
-                );
-        }
-        catch (error) {
-            parsed =
-                parseLegacyAMMEF(
-                    buffer,
-                    data
-                );
-        }
     }
     else {
         parsed =
@@ -1241,83 +1479,184 @@ async function readAMMEFFile(file) {
             );
     }
 
-    lastLoadedAMMEFMetadata =
-        parsed.metadata;
-
-    lastLoadedAMMEFCleanBlob =
-        parsed.cleanAudioBlob;
-
-    lastLoadedAMMEFMonitorBlob =
-        parsed.monitorAudioBlob;
-
-    lastLoadedAMMEFTelemetryBlob =
-        parsed.telemetryAudioBlob;
-
-    lastLoadedAMMEFVideoMonitorBlob =
-        parsed.videoMonitorAudioBlob;
-
-    lastLoadedAMMEFPhotoMonitorBlob =
-        parsed.photoMonitorAudioBlob;
-
-    lastLoadedAMMEFVideoBlob =
-        parsed.originalVideoBlob;
-
-    lastLoadedAMMEFVideoName =
-        parsed.originalVideoName;
-
-    lastLoadedAMMEFVideoType =
-        parsed.originalVideoType;
-
-    lastLoadedAMMEFPhotoBlob =
-        parsed.originalPhotoBlob;
-
-    lastLoadedAMMEFPhotoName =
-        parsed.originalPhotoName;
-
-    lastLoadedAMMEFPhotoType =
-        parsed.originalPhotoType;
-
     lastAMMEFData =
         parsed;
-
-    applyAMMEFMetadata(
-        parsed.metadata
-    );
-
-    /*
-     * Restore current media variables so the normal
-     * preview functions can also use loaded AMMEF media.
-     */
-    lastOriginalVideoBlob =
-        parsed.originalVideoBlob;
-
-    lastOriginalVideoName =
-        parsed.originalVideoName;
-
-    lastOriginalVideoType =
-        parsed.originalVideoType;
-
-    lastOriginalPhotoBlob =
-        parsed.originalPhotoBlob;
-
-    lastOriginalPhotoName =
-        parsed.originalPhotoName;
-
-    lastOriginalPhotoType =
-        parsed.originalPhotoType;
-
-    lastVideoMonitorAudioBlob =
-        parsed.videoMonitorAudioBlob;
-
-    lastPhotoMonitorAudioBlob =
-        parsed.photoMonitorAudioBlob;
 
     return parsed;
 }
 
-async function loadAMMEF(file) {
+// ======================================================
+// Restoring loaded AMMEF state
+// ======================================================
+
+/**
+ * Copies parsed AMMEF data into the dashboard's global
+ * media variables.
+ *
+ * @param {object} parsed
+ */
+function restoreAMMEFGlobals(
+    parsed
+) {
+    if (
+        !parsed ||
+        typeof parsed !==
+            "object"
+    ) {
+        return;
+    }
+
+    lastLoadedAMMEFMetadata =
+        parsed.metadata ||
+        null;
+
+    lastLoadedAMMEFCleanBlob =
+        parsed.cleanAudioBlob ||
+        null;
+
+    lastLoadedAMMEFMonitorBlob =
+        parsed.monitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFTelemetryBlob =
+        parsed.telemetryAudioBlob ||
+        null;
+
+    lastLoadedAMMEFVideoMonitorBlob =
+        parsed.videoMonitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFPhotoMonitorBlob =
+        parsed.photoMonitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFVideoBlob =
+        parsed.originalVideoBlob ||
+        null;
+
+    lastLoadedAMMEFVideoName =
+        parsed.originalVideoName ||
+        null;
+
+    lastLoadedAMMEFVideoType =
+        parsed.originalVideoType ||
+        null;
+
+    lastLoadedAMMEFPhotoBlob =
+        parsed.originalPhotoBlob ||
+        null;
+
+    lastLoadedAMMEFPhotoName =
+        parsed.originalPhotoName ||
+        null;
+
+    lastLoadedAMMEFPhotoType =
+        parsed.originalPhotoType ||
+        null;
+
+    /*
+     * Copy into the ordinary variables used by the
+     * photo/video preview functions.
+     */
+    lastOriginalVideoBlob =
+        parsed.originalVideoBlob ||
+        null;
+
+    lastOriginalVideoName =
+        parsed.originalVideoName ||
+        null;
+
+    lastOriginalVideoType =
+        parsed.originalVideoType ||
+        null;
+
+    lastVideoMonitorAudioBlob =
+        parsed.videoMonitorAudioBlob ||
+        null;
+
+    lastOriginalPhotoBlob =
+        parsed.originalPhotoBlob ||
+        null;
+
+    lastOriginalPhotoName =
+        parsed.originalPhotoName ||
+        null;
+
+    lastOriginalPhotoType =
+        parsed.originalPhotoType ||
+        null;
+
+    lastPhotoMonitorAudioBlob =
+        parsed.photoMonitorAudioBlob ||
+        null;
+
+    lastCleanAudioBlob =
+        parsed.cleanAudioBlob ||
+        null;
+
+    lastModulatedAudioBlob =
+        parsed.monitorAudioBlob ||
+        parsed.videoMonitorAudioBlob ||
+        parsed.photoMonitorAudioBlob ||
+        null;
+
+    lastTelemetryAudioBlob =
+        parsed.telemetryAudioBlob ||
+        null;
+
+    lastProcessedAudioBlob =
+        parsed.cleanAudioBlob ||
+        parsed.monitorAudioBlob ||
+        parsed.videoMonitorAudioBlob ||
+        parsed.photoMonitorAudioBlob ||
+        parsed.telemetryAudioBlob ||
+        null;
+
+    lastAMMEFData =
+        parsed;
+
+    if (
+        parsed.metadata
+    ) {
+        lastVideoMetadata =
+            parsed.metadata
+                ?.tracks
+                ?.videoMonitor
+                ?.metadata ||
+            null;
+
+        lastPhotoMetadata =
+            parsed.metadata
+                ?.tracks
+                ?.photoMonitor
+                ?.metadata ||
+            null;
+    }
+}
+
+// ======================================================
+// Local AMMEF loading
+// ======================================================
+
+/**
+ * Loads and decodes a local AMMEF file.
+ *
+ * @param {Blob} file
+ * @returns {Promise<object>}
+ */
+async function loadAMMEF(
+    file
+) {
+    if (
+        !(file instanceof Blob)
+    ) {
+        throw new TypeError(
+            "loadAMMEF requires a File or Blob."
+        );
+    }
+
     txtTxState.textContent =
-        "DEC";
+        "LOAD";
 
     boxTxState.style.background =
         "#004466";
@@ -1326,60 +1665,84 @@ async function loadAMMEF(file) {
         "STATUS: Reading AMMEF container...";
 
     txtStatus.style.color =
-        "yellow";
+        "#FFD700";
 
     try {
         const parsed =
-            await readAMMEFFile(file);
-
-        const playbackTrack =
-            parsed.cleanAudioBlob ||
-            parsed.monitorAudioBlob ||
-            parsed.photoMonitorAudioBlob ||
-            parsed.videoMonitorAudioBlob ||
-            parsed.telemetryAudioBlob;
-
-        if (playbackTrack) {
-            const decoded =
-                await decodeAudioBlob(
-                    playbackTrack
-                );
-
-            lastAudioPcmArray =
-                decoded.pcmSamples;
-
-            await playAudioBlob(
-                playbackTrack
+            await readAMMEFFile(
+                file
             );
-        }
 
-        lastCleanAudioBlob =
-            parsed.cleanAudioBlob;
+        restoreAMMEFGlobals(
+            parsed
+        );
 
-        lastModulatedAudioBlob =
-            parsed.monitorAudioBlob;
-
-        lastTelemetryAudioBlob =
-            parsed.telemetryAudioBlob;
-
-        lastProcessedAudioBlob =
-            parsed.cleanAudioBlob ||
-            parsed.monitorAudioBlob ||
-            parsed.photoMonitorAudioBlob ||
-            parsed.videoMonitorAudioBlob ||
-            null;
+        applyAMMEFMetadata(
+            parsed.metadata
+        );
 
         if (
-            typeof enableSaveButton ===
+            typeof refreshMediaActionButtons ===
             "function"
         ) {
-            enableSaveButton();
+            refreshMediaActionButtons();
+        }
+
+        /*
+         * Use the same central decoder that handles
+         * Internet AMMEF packets.
+         */
+        if (
+            typeof decodeIncomingAMMEFPacket ===
+            "function"
+        ) {
+            await decodeIncomingAMMEFPacket(
+                parsed,
+                {
+                    transmissionKind:
+                        parsed.metadata
+                            ?.transmissionKind ||
+                        "audio",
+
+                    from:
+                        parsed.metadata
+                            ?.callsign ||
+                        "FILE",
+
+                    frequency:
+                        parsed.metadata
+                            ?.virtualFrequency
+                }
+            );
+        }
+        else {
+            /*
+             * Basic fallback if decoder.js has not loaded.
+             */
+            const playableBlob =
+                parsed.cleanAudioBlob ||
+                parsed.monitorAudioBlob ||
+                parsed.photoMonitorAudioBlob ||
+                parsed.videoMonitorAudioBlob ||
+                parsed.telemetryAudioBlob;
+
+            if (
+                playableBlob &&
+                typeof playAudioBlob ===
+                    "function"
+            ) {
+                await playAudioBlob(
+                    playableBlob
+                );
+            }
         }
 
         txtStatus.textContent =
-            `STATUS: Loaded AMMEF ${parsed.version} — ` +
-            `${parsed.metadata.mode || "Unknown mode"}, ` +
-            `${parsed.metadata.virtualFrequency ?? "----"} Vt.`;
+            `STATUS: AMMEF ${
+                parsed.metadata
+                    ?.version ||
+                ""
+            } loaded successfully.`;
 
         txtStatus.style.color =
             "#00FF7F";
@@ -1393,7 +1756,10 @@ async function loadAMMEF(file) {
         );
 
         txtStatus.textContent =
-            `ERROR: ${error.message}`;
+            `ERROR: ${
+                error.message ||
+                "Invalid AMMEF file."
+            }`;
 
         txtStatus.style.color =
             "#FF3333";
@@ -1409,135 +1775,196 @@ async function loadAMMEF(file) {
     }
 }
 
-// ======================================================
-// Playback helpers
-// ======================================================
-
-async function playAMMEFTrack(
-    blob,
-    stateText,
-    stateColor,
-    statusText,
-    statusColor
+/**
+ * Alias retained for compatibility with older code.
+ *
+ * @param {Blob} file
+ * @returns {Promise<object>}
+ */
+async function loadAMMEFFile(
+    file
 ) {
-    if (!(blob instanceof Blob)) {
-        txtStatus.textContent =
-            "ERROR: This AMMEF does not contain that track.";
-
-        txtStatus.style.color =
-            "#FF3333";
-
-        return;
-    }
-
-    const decoded =
-        await decodeAudioBlob(blob);
-
-    lastAudioPcmArray =
-        decoded.pcmSamples;
-
-    txtTxState.textContent =
-        stateText;
-
-    boxTxState.style.background =
-        stateColor;
-
-    await playAudioBlob(blob);
-
-    txtStatus.textContent =
-        statusText;
-
-    txtStatus.style.color =
-        statusColor;
-}
-
-async function playLoadedAMMEFCleanTrack() {
-    return playAMMEFTrack(
-        lastLoadedAMMEFCleanBlob,
-        "CLN",
-        "#004422",
-        "STATUS: Playing clean AMMEF audio.",
-        "#00FF7F"
-    );
-}
-
-async function playLoadedAMMEFRawTrack() {
-    return playAMMEFTrack(
-        lastLoadedAMMEFMonitorBlob,
-        "RAW",
-        "#665500",
-        "STATUS: Playing raw FM monitor waveform.",
-        "#FFD700"
-    );
-}
-
-async function playLoadedAMMEFTelemetryTrack() {
-    return playAMMEFTrack(
-        lastLoadedAMMEFTelemetryBlob,
-        "TEL",
-        "#663366",
-        "STATUS: Playing AMMEF telemetry signal.",
-        "#FF77FF"
-    );
-}
-
-async function playLoadedAMMEFVideoMonitorTrack() {
-    return playAMMEFTrack(
-        lastLoadedAMMEFVideoMonitorBlob,
-        "VID",
-        "#550055",
-        "STATUS: Playing encoded ABMTV video signal.",
-        "#FF55FF"
-    );
-}
-
-async function playLoadedAMMEFPhotoMonitorTrack() {
-    return playAMMEFTrack(
-        lastLoadedAMMEFPhotoMonitorBlob,
-        "PIC",
-        "#550055",
-        "STATUS: Playing encoded ABMTV still-frame signal.",
-        "#FF55FF"
+    return loadAMMEF(
+        file
     );
 }
 
 // ======================================================
-// Original-media preview helpers
+// AMMEF file picker
 // ======================================================
 
-function previewLoadedAMMEFVideo() {
+/**
+ * Opens a file picker for AMMEF files.
+ */
+function openAMMEFPicker() {
+    const fileInput =
+        document.createElement(
+            "input"
+        );
+
+    fileInput.type =
+        "file";
+
+    fileInput.accept =
+        ".ammef,.AMMEF,application/x-ammef";
+
+    fileInput.onchange =
+        async event => {
+            const file =
+                event.target
+                    .files?.[0];
+
+            if (!file) {
+                return;
+            }
+
+            try {
+                await loadAMMEF(
+                    file
+                );
+            }
+            catch {
+                /*
+                 * loadAMMEF already handles the displayed
+                 * error message.
+                 */
+            }
+        };
+
+    fileInput.click();
+}
+
+// ======================================================
+// Loaded-track playback
+// ======================================================
+
+/**
+ * Plays the clean audio from the most recently loaded
+ * AMMEF file.
+ */
+async function playLoadedAMMEFCleanAudio() {
     if (
-        !(lastLoadedAMMEFVideoBlob instanceof Blob)
+        !(
+            lastLoadedAMMEFCleanBlob
+            instanceof Blob
+        )
     ) {
-        txtStatus.textContent =
-            "ERROR: This AMMEF contains no compressed video.";
-
-        txtStatus.style.color =
-            "#FF3333";
-
-        return;
+        throw new Error(
+            "This AMMEF contains no clean audio track."
+        );
     }
 
-    lastOriginalVideoBlob =
-        lastLoadedAMMEFVideoBlob;
-
-    lastOriginalVideoName =
-        lastLoadedAMMEFVideoName ||
-        "AMMEF_Video";
-
-    lastOriginalVideoType =
-        lastLoadedAMMEFVideoType ||
-        lastLoadedAMMEFVideoBlob.type;
-
-    previewOriginalVideo();
+    await playAudioBlob(
+        lastLoadedAMMEFCleanBlob
+    );
 }
 
+/**
+ * Plays the raw FM monitor waveform.
+ */
+async function playLoadedAMMEFMonitorAudio() {
+    if (
+        !(
+            lastLoadedAMMEFMonitorBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "This AMMEF contains no FM monitor track."
+        );
+    }
+
+    if (
+        typeof monitorRawAudio ===
+        "function"
+    ) {
+        await monitorRawAudio(
+            lastLoadedAMMEFMonitorBlob
+        );
+    }
+    else {
+        await playAudioBlob(
+            lastLoadedAMMEFMonitorBlob
+        );
+    }
+}
+
+/**
+ * Plays the telemetry waveform.
+ */
+async function playLoadedAMMEFTelemetry() {
+    if (
+        !(
+            lastLoadedAMMEFTelemetryBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "This AMMEF contains no telemetry track."
+        );
+    }
+
+    await playAudioBlob(
+        lastLoadedAMMEFTelemetryBlob
+    );
+}
+
+/**
+ * Plays the photo monitor tones.
+ */
+async function playLoadedAMMEFPhotoMonitor() {
+    if (
+        !(
+            lastLoadedAMMEFPhotoMonitorBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "This AMMEF contains no photo-monitor track."
+        );
+    }
+
+    await playAudioBlob(
+        lastLoadedAMMEFPhotoMonitorBlob
+    );
+}
+
+/**
+ * Plays the video monitor tones.
+ */
+async function playLoadedAMMEFVideoMonitor() {
+    if (
+        !(
+            lastLoadedAMMEFVideoMonitorBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "This AMMEF contains no video-monitor track."
+        );
+    }
+
+    await playAudioBlob(
+        lastLoadedAMMEFVideoMonitorBlob
+    );
+}
+
+// ======================================================
+// Loaded media preview
+// ======================================================
+
+/**
+ * Previews the original photo restored from AMMEF.
+ */
 function previewLoadedAMMEFPhoto() {
     if (
-        !(lastLoadedAMMEFPhotoBlob instanceof Blob)
+        !(
+            lastLoadedAMMEFPhotoBlob
+            instanceof Blob
+        )
     ) {
         txtStatus.textContent =
-            "ERROR: This AMMEF contains no compressed photo.";
+            "ERROR: The loaded AMMEF contains no original photo.";
 
         txtStatus.style.color =
             "#FF3333";
@@ -1550,11 +1977,245 @@ function previewLoadedAMMEFPhoto() {
 
     lastOriginalPhotoName =
         lastLoadedAMMEFPhotoName ||
-        "AMMEF_Photo";
+        "ArNet_Photo";
 
     lastOriginalPhotoType =
         lastLoadedAMMEFPhotoType ||
-        lastLoadedAMMEFPhotoBlob.type;
+        lastLoadedAMMEFPhotoBlob
+            .type;
 
-    previewOriginalPhoto();
+    if (
+        typeof previewOriginalPhoto ===
+        "function"
+    ) {
+        previewOriginalPhoto();
+    }
+}
+
+/**
+ * Previews the original video restored from AMMEF.
+ */
+function previewLoadedAMMEFVideo() {
+    if (
+        !(
+            lastLoadedAMMEFVideoBlob
+            instanceof Blob
+        )
+    ) {
+        txtStatus.textContent =
+            "ERROR: The loaded AMMEF contains no original video.";
+
+        txtStatus.style.color =
+            "#FF3333";
+
+        return;
+    }
+
+    lastOriginalVideoBlob =
+        lastLoadedAMMEFVideoBlob;
+
+    lastOriginalVideoName =
+        lastLoadedAMMEFVideoName ||
+        "ArNet_Video";
+
+    lastOriginalVideoType =
+        lastLoadedAMMEFVideoType ||
+        lastLoadedAMMEFVideoBlob
+            .type;
+
+    if (
+        typeof previewOriginalVideo ===
+        "function"
+    ) {
+        previewOriginalVideo();
+    }
+}
+
+// ======================================================
+// Original media download helpers
+// ======================================================
+
+/**
+ * Downloads a Blob using a temporary anchor.
+ *
+ * @param {Blob} blob
+ * @param {string} fileName
+ */
+function downloadAMMEFPayload(
+    blob,
+    fileName
+) {
+    if (
+        !(blob instanceof Blob)
+    ) {
+        throw new TypeError(
+            "A Blob is required for downloading."
+        );
+    }
+
+    const url =
+        URL.createObjectURL(
+            blob
+        );
+
+    const anchor =
+        document.createElement(
+            "a"
+        );
+
+    anchor.href =
+        url;
+
+    anchor.download =
+        sanitizeDownloadName(
+            fileName ||
+            "ArNet_Payload.bin"
+        );
+
+    document.body.appendChild(
+        anchor
+    );
+
+    anchor.click();
+    anchor.remove();
+
+    setTimeout(
+        () => {
+            URL.revokeObjectURL(
+                url
+            );
+        },
+        1000
+    );
+}
+
+/**
+ * Downloads the original photo from the loaded AMMEF.
+ */
+function downloadLoadedAMMEFPhoto() {
+    if (
+        !(
+            lastLoadedAMMEFPhotoBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "The loaded AMMEF contains no original photo."
+        );
+    }
+
+    downloadAMMEFPayload(
+        lastLoadedAMMEFPhotoBlob,
+        lastLoadedAMMEFPhotoName ||
+        "ArNet_Photo.bin"
+    );
+}
+
+/**
+ * Downloads the original video from the loaded AMMEF.
+ */
+function downloadLoadedAMMEFVideo() {
+    if (
+        !(
+            lastLoadedAMMEFVideoBlob
+            instanceof Blob
+        )
+    ) {
+        throw new Error(
+            "The loaded AMMEF contains no original video."
+        );
+    }
+
+    downloadAMMEFPayload(
+        lastLoadedAMMEFVideoBlob,
+        lastLoadedAMMEFVideoName ||
+        "ArNet_Video.bin"
+    );
+}
+
+// ======================================================
+// Media-button refresh
+// ======================================================
+
+/**
+ * Updates optional media buttons if they exist in the
+ * dashboard.
+ *
+ * The function safely ignores buttons that have not yet
+ * been added to index.html.
+ */
+function refreshMediaActionButtons() {
+    const buttonStates = [
+        {
+            id:
+                "btnPlayClean",
+
+            enabled:
+                lastLoadedAMMEFCleanBlob
+                instanceof Blob
+        },
+
+        {
+            id:
+                "btnPlayRaw",
+
+            enabled:
+                lastLoadedAMMEFMonitorBlob
+                instanceof Blob
+        },
+
+        {
+            id:
+                "btnPlayTelemetry",
+
+            enabled:
+                lastLoadedAMMEFTelemetryBlob
+                instanceof Blob
+        },
+
+        {
+            id:
+                "btnPreviewPhoto",
+
+            enabled:
+                lastLoadedAMMEFPhotoBlob
+                instanceof Blob
+        },
+
+        {
+            id:
+                "btnPreviewVideo",
+
+            enabled:
+                lastLoadedAMMEFVideoBlob
+                instanceof Blob
+        }
+    ];
+
+    for (
+        const state of
+        buttonStates
+    ) {
+        const button =
+            document.getElementById(
+                state.id
+            );
+
+        if (!button) {
+            continue;
+        }
+
+        button.disabled =
+            !state.enabled;
+
+        button.style.opacity =
+            state.enabled
+                ? "1"
+                : "0.5";
+
+        button.style.cursor =
+            state.enabled
+                ? "pointer"
+                : "not-allowed";
+    }
 }
