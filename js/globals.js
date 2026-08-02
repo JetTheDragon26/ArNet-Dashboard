@@ -41,6 +41,10 @@ let lastLoadedAMMEFPhotoType = null;
 let isPlaying = false;
 let playbackStartTime = 0;
 let currentAmplitude = 0.02;
+let currentAudioElement = null;
+let currentAudioUrl = null;
+let audioPlaybackQueue = [];
+let audioQueueRunning = false;
 
 // ---------- Frequency ----------
 let minFreq = 4550;
