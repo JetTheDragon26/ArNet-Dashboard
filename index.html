@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArNet Transceiver Web GUI</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="window">
+        <div class="border-box" style="height: 120px; padding: 8px;">
+            <div class="top-grid">
+                <div class="meter-container" id="meterContainer">
+                    <canvas id="canvasMeter" width="200" height="90" style="position:absolute; left:0; top:0;"></canvas>
+                </div>
+                <div style="display: flex; flex-direction: column; justify-content: center; padding-left: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; gap: 4px;">
+                            <select id="comboMode" style="width: 70px; height: 20px; background: #222; color: #FFCC00; font-weight: bold; font-size: 10px;">
+                                <option value="AARM" selected>AARM</option>
+                                <option value="ABM">ABM</option>
+                                <option value="ABMTV">ABMTV</option>
+                            </select>
+                            <select id="comboBand" style="width: 105px; height: 20px; background: #222; color: #00FFFF; font-weight: bold; font-size: 10px;"></select>
+                            <div id="boxTxState" style="background: #330000; border-radius: 2px; padding: 1px 4px; display: flex; align-items: center; margin-left: 5px;">
+                                <span id="txtTxState" style="color: #FF3333; font-size: 11px; font-weight: bold;">RX</span>
+                            </div>
+                        </div>
+                        <span id="txtClock" style="color: #888888; font-size: 11px;">23:48:08</span>
+                    </div>
+                    <div style="display: flex; justify-content: center; align-items: center; margin-top: 4px;">
+                        <input id="txtFrequency" type="text" value="4550" style="color: #00FFFF; background: #0A0A0C; border: 1px solid #005555; font-size: 36px; font-weight: bold; text-align: right; width: 160px; height: 48px;" />
+                        <span style="color: #00FFFF; font-size: 20px; font-weight: bold; margin-left: 4px; align-self: flex-end; margin-bottom: 6px;">Vt</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <div class="controls-grid" style="margin-bottom: 8px;">
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+                <button id="btnPtt" style="height: 32px; background: #880000; color: white; font-weight: bold; font-size: 11px; cursor: pointer;">🎙️ PTT MIC</button>
+                <button id="btnLoadVideo" style="height: 26px; background: #005577; color: #00FFFF; font-weight: bold; font-size: 10px; cursor: pointer;">📷 LOAD VIDEO / IMAGE</button>
+                <div style="display: grid; grid-template-columns: 1fr 65px; gap: 4px;">
+                    <input id="txtCallsign" type="text" value="W1AW/1" maxlength="7" style="background: #111115; color: #00FFCC; border: 1px solid #333333; font-weight: bold; font-size: 11px; text-align: center; height: 26px;" />
+                    <button id="btnIdent" style="background: #004466; color: white; font-weight: bold; font-size: 10px; cursor: pointer;">📡 IDENT</button>
+                </div>
+                <label style="display: flex; align-items: center; gap: 4px; margin-top: 2px; cursor: pointer;">
+                    <input type="checkbox" id="chkUnencoded" />
+                    <span style="color: #AAAAAA; font-size: 9px;">Unencoded Audio (Plain Morse)</span>
+                </label>
+            </div>
+            <div></div>
+            <div class="border-box" style="display: flex; flex-direction: column; justify-content: space-between;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #AAAAAA; font-size: 10px; font-weight: bold;">CARRIER &amp; BANDWIDTH CONFIG</span>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <span style="color: #888888; font-size: 9px;">BANDWIDTH:</span>
+                        <select id="comboBandwidth" style="width: 105px; height: 18px; background: #111; color: #00FFCC; font-size: 9px; font-weight: bold;">
+                            <option value="wide" selected>Wide (2.8 kHz)</option>
+                            <option value="narrow">Narrow (500 Hz)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: #CCCCCC; font-size: 11px;">Baseline Carrier Power:</span>
+                        <span id="txtCarrierVal" style="color: #00FFFF; font-weight: bold; font-size: 11px;">20%</span>
+                    </div>
+                    <input type="range" id="sliderCarrier" min="0.0" max="0.5" step="0.05" value="0.1" style="width: 100%; cursor: pointer;" />
+                </div>
+            </div>
+        </div>
+
+        <div class="scope-grid">
+            <div style="height: 22px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="lblScopeMode" style="color: #00FFFF; font-size: 10px; font-weight: bold;">SPECTRUM SCOPE</span>
+                    <button id="btnToggleDisplay" style="background: #003344; color: #00FFCC; font-size: 9px; font-weight: bold; padding: 2px 6px; cursor: pointer;">🔄 SWITCH TO WATERFALL</button>
+                </div>
+                <div style="display: flex; gap: 8px; font-size: 9px;">
+                    <span style="color: #00FFFF;">■ Carrier</span>
+                    <span style="color: #FFFF00;">■ Audio</span>
+                    <span id="txtVideoLegend" style="color: #FF00FF; display: none;">■ Video Subcarrier</span>
+                </div>
+            </div>
+            <div class="scope-screen">
+                <canvas id="canvasScope" style="width: 100%; height: 100%; display: block;"></canvas>
+                <canvas id="imgWaterfall" style="width: 100%; height: 100%; display: none; image-rendering: pixelated;"></canvas>
+            </div>
+        </div>
+
+        <div class="bottom-grid">
+            <div style="display:flex; gap:4px; height:100%;">
+                <button id="btnLoad" style="height:100%; background:#003366; color:white; font-weight:bold; font-size:10px;" disabled>
+                    📁 DECODE WAV
+                </button>
+                <button id="btnLoadAMMEF" style="height:100%; background:#224466; color:white; font-weight:bold; font-size:10px;">
+                    📂 LOAD AMMEF
+                </button>
+                <button id="btnSave" style="height:100%; background:#114422; color:white; font-weight:bold; font-size:10px;" disabled>
+                    💾 SAVE .AMMEF
+                </button>
+            </div>
+            <div class="border-box" style="padding:4px 8px; height:100%; display:flex; align-items:center;">
+                <span id="txtStatus" style="color:#888888; font-size:11px;">
+                    STATUS: STANDBY...
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
