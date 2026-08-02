@@ -66,7 +66,7 @@ let lastPhotoMetadata = null;
 let networkSocket = null;
 let networkConnected = false;
 
-let networkServerUrl = "ws://localhost:8080";
+let networkServerUrl = "ws://192.168.219.1:8080";
 
 let networkStationId = null;
 let networkCurrentFrequency = 4550;
