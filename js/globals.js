@@ -66,7 +66,8 @@ let lastPhotoMetadata = null;
 let networkSocket = null;
 let networkConnected = false;
 
-let networkServerUrl = "ws://192.168.0.48:8080";
+let networkServerUrl =
+    "wss://arnet-dashboard-server.onrender.com";
 
 let networkStationId = null;
 let networkCurrentFrequency = 4550;
