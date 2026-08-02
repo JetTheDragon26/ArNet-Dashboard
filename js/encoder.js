@@ -362,6 +362,33 @@ async function processPttRecording() {
          */
         lastProcessedAudioBlob =
             lastCleanAudioBlob;
+        if (networkConnected) {
+    try {
+        if (
+            networkTargetMode === "direct" &&
+            networkDirectTarget
+        ) {
+            await sendAudioBlobToNetwork(
+                lastCleanAudioBlob,
+                {
+                    directTarget:
+                        networkDirectTarget
+                }
+            );
+        }
+        else {
+            await sendAudioBlobToNetwork(
+                lastCleanAudioBlob
+            );
+        }
+    }
+    catch (error) {
+        console.error(
+            "Network transmission failed:",
+            error
+        );
+    }
+}
 
         enableSaveButton();
 
