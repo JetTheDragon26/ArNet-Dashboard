@@ -11,6 +11,21 @@ function setNetworkStatus(message, color = "#AAAAAA") {
     }
 }
 
+function updateNetworkRegistration() {
+    if (
+        !networkSocket ||
+        networkSocket.readyState !== WebSocket.OPEN
+    ) {
+        return;
+    }
+
+    sendNetworkMessage({
+        type: "register",
+        callsign: getNetworkCallsign(),
+        frequency: getNetworkFrequency()
+    });
+}
+
 function getNetworkCallsign() {
     const value =
         txtCallsign.value
