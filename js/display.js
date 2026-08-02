@@ -265,7 +265,7 @@ function drawSignalMeter(amplitude) {
         "#3399FF";
 
     meterCtx.fillText(
-        "Po W",
+        "Decibels",
         87,
         56
     );
