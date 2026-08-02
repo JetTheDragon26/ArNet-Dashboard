@@ -836,5 +836,26 @@ txtCallsign.addEventListener(
     "blur",
     updateNetworkRegistration
 );
+
+txtCallsign.addEventListener(
+    "change",
+    updateNetworkRegistration
+);
+
+txtCallsign.addEventListener(
+    "blur",
+    updateNetworkRegistration
+);
+
+txtCallsign.addEventListener(
+    "keydown",
+    event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            updateNetworkRegistration();
+            txtCallsign.blur();
+        }
+    }
+);
     
 }
