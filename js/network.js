@@ -519,6 +519,114 @@ async function sendAudioBlobToNetwork(
 // ======================================================
 // Incoming network messages
 // ======================================================
+// ======================================================
+// Incoming transmission filter
+// ======================================================
+
+function shouldReceiveNetworkTransmission(
+    message
+) {
+    const incomingFrequency =
+        Number.parseInt(
+            message.frequency,
+            10
+        );
+
+    const localFrequency =
+        Number.parseInt(
+            txtFrequency.value,
+            10
+        );
+
+    if (
+        !Number.isFinite(
+            incomingFrequency
+        ) ||
+        !Number.isFinite(
+            localFrequency
+        ) ||
+        incomingFrequency !==
+            localFrequency
+    ) {
+        console.log(
+            `[ArNet] Ignored transmission from ` +
+            `${message.from || "UNKNOWN"}: ` +
+            `${incomingFrequency} Vt does not match ` +
+            `${localFrequency} Vt.`
+        );
+
+        return false;
+    }
+
+    const incomingMode =
+        String(
+            message.mode ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const localMode =
+        String(
+            comboMode.value ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        incomingMode &&
+        incomingMode !==
+            localMode
+    ) {
+        console.log(
+            `[ArNet] Ignored ${incomingMode} transmission; ` +
+            `receiver is in ${localMode}.`
+        );
+
+        return false;
+    }
+
+    const incomingBand =
+        String(
+            message.band ||
+            ""
+        ).trim();
+
+    if (
+        incomingBand &&
+        incomingBand !==
+            comboBand.value
+    ) {
+        console.log(
+            `[ArNet] Ignored transmission on ${incomingBand}; ` +
+            `receiver is on ${comboBand.value}.`
+        );
+
+        return false;
+    }
+
+    const incomingBandwidth =
+        String(
+            message.bandwidth ||
+            ""
+        ).trim();
+
+    if (
+        incomingBandwidth &&
+        incomingBandwidth !==
+            comboBandwidth.value
+    ) {
+        console.log(
+            `[ArNet] Ignored ${incomingBandwidth} transmission; ` +
+            `receiver uses ${comboBandwidth.value}.`
+        );
+
+        return false;
+    }
+
+    return true;
+}
 
 async function handleNetworkMessage(
     event
