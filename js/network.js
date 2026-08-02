@@ -3,7 +3,7 @@
 // WebSocket Networking and AMMEF Transport
 // ======================================================
 
-function setNetworkStatus(rec
+function setNetworkStatus(
     message,
     color = "#AAAAAA"
 ) {
