@@ -19,11 +19,10 @@ let lastModulatedAudioBlob = null;
 let lastProcessedAudioBlob = null;
 let lastAudioPcmArray = null;
 
-let lastLoadedAMMEFMetadata = null;
-let lastLoadedAMMEFCleanBlob = null;
-let lastLoadedAMMEFMonitorBlob = null;
+// ---------- AMMEF ----------
 let lastAMMEFData = null;
-let ammefVersion = "1.0";
+let ammefVersion = "2.3";
+
 let lastLoadedAMMEFMetadata = null;
 
 let lastLoadedAMMEFCleanBlob = null;
@@ -40,6 +39,8 @@ let lastLoadedAMMEFVideoType = null;
 let lastLoadedAMMEFPhotoBlob = null;
 let lastLoadedAMMEFPhotoName = null;
 let lastLoadedAMMEFPhotoType = null;
+
+let lastTelemetryAudioBlob = null;
 
 // ---------- Playback ----------
 let isPlaying = false;
