@@ -15,7 +15,7 @@ let lastTelemetryAudioBlob = null;
 
 let lastProcessedAudioBlob = null;
 let lastAudioPcmArray = null;
-
+let lastDecodedMorseText = "";
 // ---------- AMMEF ----------
 let lastAMMEFData = null;
 let ammefVersion = "2.3";
