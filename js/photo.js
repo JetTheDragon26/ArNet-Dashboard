@@ -1,6 +1,6 @@
 // ======================================================
 // ArNet Transceiver
-// Compressed Photo Import and ABMTV Still-Frame Encoder
+// Photo Import, ABMTV Encoding, and Network Transport
 // ======================================================
 
 const ARNET_PHOTO_SCAN_WIDTH = 128;
@@ -12,6 +12,10 @@ const ARNET_PHOTO_WHITE_FREQUENCY = 2300;
 
 const ARNET_PHOTO_SYNC_DURATION = 0.005;
 const ARNET_PHOTO_PIXEL_DURATION = 0.0015;
+
+// ======================================================
+// File validation
+// ======================================================
 
 /**
  * Checks whether a selected file is a supported image.
@@ -36,10 +40,18 @@ function isSupportedPhotoFile(file) {
         name.endsWith(".bmp");
 
     const supportedMime =
+        typeof file.type === "string" &&
         file.type.startsWith("image/");
 
-    return supportedExtension || supportedMime;
+    return (
+        supportedExtension ||
+        supportedMime
+    );
 }
+
+// ======================================================
+// Image loading
+// ======================================================
 
 /**
  * Loads an image Blob into an HTMLImageElement.
@@ -50,37 +62,55 @@ function isSupportedPhotoFile(file) {
  *     url: string
  * }>}
  */
-function createLoadedPhotoElement(imageBlob) {
-    return new Promise((resolve, reject) => {
-        const url =
-            URL.createObjectURL(imageBlob);
+function createLoadedPhotoElement(
+    imageBlob
+) {
+    return new Promise(
+        (
+            resolve,
+            reject
+        ) => {
+            const url =
+                URL.createObjectURL(
+                    imageBlob
+                );
 
-        const image =
-            new Image();
+            const image =
+                new Image();
 
-        image.onload = () => {
-            resolve({
-                image,
-                url
-            });
-        };
+            image.onload =
+                () => {
+                    resolve({
+                        image,
+                        url
+                    });
+                };
 
-        image.onerror = () => {
-            URL.revokeObjectURL(url);
+            image.onerror =
+                () => {
+                    URL.revokeObjectURL(
+                        url
+                    );
 
-            reject(
-                new Error(
-                    "The browser could not load this image."
-                )
-            );
-        };
+                    reject(
+                        new Error(
+                            "The browser could not load this image."
+                        )
+                    );
+                };
 
-        image.src = url;
-    });
+            image.src =
+                url;
+        }
+    );
 }
 
+// ======================================================
+// Tone generation
+// ======================================================
+
 /**
- * Appends an audible sine-wave tone.
+ * Adds a sine-wave tone to a PCM array.
  *
  * @param {number[]} destination
  * @param {number} frequency
@@ -103,32 +133,43 @@ function appendPhotoTone(
         );
 
     for (
-        let sampleIndex = 0;
-        sampleIndex < sampleCount;
-        sampleIndex++
+        let index = 0;
+        index < sampleCount;
+        index++
     ) {
         phaseState.value +=
             (
                 2 *
                 Math.PI *
                 frequency
-            ) / ARNET_SAMPLE_RATE;
+            ) /
+            ARNET_SAMPLE_RATE;
+
+        const sample =
+            Math.sin(
+                phaseState.value
+            ) *
+            15000;
 
         destination.push(
-            Math.round(
-                Math.sin(
-                    phaseState.value
-                ) * 15000
+            Math.max(
+                -32768,
+                Math.min(
+                    32767,
+                    Math.round(
+                        sample
+                    )
+                )
             )
         );
     }
 }
 
 /**
- * Converts one RGBA image frame into ABMTV tones.
+ * Converts an RGBA image into ABMTV-style tones.
  *
  * Each row begins with a synchronization tone.
- * Pixel brightness determines the following frequency.
+ * Pixel brightness determines the tone frequency.
  *
  * @param {Uint8ClampedArray} rgbaData
  * @param {number[]} pcmSamples
@@ -163,23 +204,42 @@ function encodePhotoPixels(
         ) {
             const pixelIndex =
                 rowOffset +
-                (x * 4);
+                (
+                    x *
+                    4
+                );
 
             const red =
-                rgbaData[pixelIndex];
+                rgbaData[
+                    pixelIndex
+                ];
 
             const green =
-                rgbaData[pixelIndex + 1];
+                rgbaData[
+                    pixelIndex + 1
+                ];
 
             const blue =
-                rgbaData[pixelIndex + 2];
+                rgbaData[
+                    pixelIndex + 2
+                ];
 
             const brightness =
                 (
-                    (red * 0.299) +
-                    (green * 0.587) +
-                    (blue * 0.114)
-                ) / 255;
+                    (
+                        red *
+                        0.299
+                    ) +
+                    (
+                        green *
+                        0.587
+                    ) +
+                    (
+                        blue *
+                        0.114
+                    )
+                ) /
+                255;
 
             const frequency =
                 ARNET_PHOTO_BLACK_FREQUENCY +
@@ -201,11 +261,13 @@ function encodePhotoPixels(
     }
 }
 
+// ======================================================
+// Photo monitor encoder
+// ======================================================
+
 /**
- * Creates an ABMTV tone waveform from a compressed image.
- *
- * The original image remains unchanged and is stored
- * separately for later AMMEF packaging.
+ * Converts a compressed image into an ABMTV monitor
+ * waveform while keeping the original image unchanged.
  *
  * @param {Blob} photoBlob
  * @returns {Promise<{
@@ -227,7 +289,9 @@ async function encodeCompressedPhotoMonitor(
 
     try {
         const canvas =
-            document.createElement("canvas");
+            document.createElement(
+                "canvas"
+            );
 
         canvas.width =
             ARNET_PHOTO_SCAN_WIDTH;
@@ -239,7 +303,8 @@ async function encodeCompressedPhotoMonitor(
             canvas.getContext(
                 "2d",
                 {
-                    willReadFrequently: true
+                    willReadFrequently:
+                        true
                 }
             );
 
@@ -249,10 +314,6 @@ async function encodeCompressedPhotoMonitor(
             );
         }
 
-        /*
-         * Fill the canvas black first so transparent image
-         * areas do not become unpredictable.
-         */
         context.fillStyle =
             "#000000";
 
@@ -263,9 +324,6 @@ async function encodeCompressedPhotoMonitor(
             canvas.height
         );
 
-        /*
-         * Preserve the source aspect ratio.
-         */
         const sourceWidth =
             image.naturalWidth ||
             image.width;
@@ -283,6 +341,9 @@ async function encodeCompressedPhotoMonitor(
             );
         }
 
+        /*
+         * Preserve aspect ratio and letterbox the image.
+         */
         const scale =
             Math.min(
                 canvas.width /
@@ -303,13 +364,15 @@ async function encodeCompressedPhotoMonitor(
             (
                 canvas.width -
                 drawWidth
-            ) / 2;
+            ) /
+            2;
 
         const drawY =
             (
                 canvas.height -
                 drawHeight
-            ) / 2;
+            ) /
+            2;
 
         context.drawImage(
             image,
@@ -330,7 +393,8 @@ async function encodeCompressedPhotoMonitor(
         const pcmSamples = [];
 
         const phaseState = {
-            value: 0
+            value:
+                0
         };
 
         encodePhotoPixels(
@@ -355,7 +419,10 @@ async function encodeCompressedPhotoMonitor(
                 "ArNet-Compressed-Photo",
 
             version:
-                "1.0",
+                "1.1",
+
+            mode:
+                "ABMTV",
 
             originalWidth:
                 sourceWidth,
@@ -376,9 +443,6 @@ async function encodeCompressedPhotoMonitor(
             originalSize:
                 photoBlob.size,
 
-            mode:
-                "ABMTV",
-
             virtualFrequency:
                 Number(
                     txtFrequency.value
@@ -387,14 +451,22 @@ async function encodeCompressedPhotoMonitor(
             frequencyUnit:
                 "Vt",
 
+            callsign:
+                txtCallsign.value
+                    .trim()
+                    .toUpperCase(),
+
             created:
-                new Date().toISOString()
+                new Date()
+                    .toISOString()
         };
 
         return {
             monitorAudioBlob,
+
             pcmSamples:
                 pcmArray,
+
             metadata
         };
     }
@@ -405,16 +477,25 @@ async function encodeCompressedPhotoMonitor(
     }
 }
 
+// ======================================================
+// Photo import and transmission
+// ======================================================
+
 /**
- * Imports a compressed photo and prepares both:
- *
- * 1. Original compressed image for AMMEF storage.
- * 2. ABMTV tone waveform for monitoring and decoding.
+ * Imports a photo, generates its ABMTV monitor track,
+ * preserves the original compressed image, and sends it
+ * as an AMMEF packet when connected.
  *
  * @param {File} file
  */
-async function importCompressedPhoto(file) {
-    if (!isSupportedPhotoFile(file)) {
+async function importCompressedPhoto(
+    file
+) {
+    if (
+        !isSupportedPhotoFile(
+            file
+        )
+    ) {
         throw new Error(
             "Please select a PNG, JPEG, WebP, GIF, or BMP image."
         );
@@ -437,13 +518,38 @@ async function importCompressedPhoto(file) {
         "purple";
 
     txtStatus.textContent =
-        `STATUS: Loading compressed image [${file.name}]...`;
+        `STATUS: Encoding photo [${file.name}]...`;
 
     txtStatus.style.color =
         "magenta";
 
     /*
-     * Preserve the original compressed image exactly.
+     * Clear unrelated audio/video payloads so the new
+     * AMMEF contains only the current photo transmission.
+     */
+    lastCleanAudioBlob =
+        null;
+
+    lastTelemetryAudioBlob =
+        null;
+
+    lastOriginalVideoBlob =
+        null;
+
+    lastOriginalVideoType =
+        null;
+
+    lastOriginalVideoName =
+        null;
+
+    lastVideoMonitorAudioBlob =
+        null;
+
+    lastVideoMetadata =
+        null;
+
+    /*
+     * Preserve the original image exactly.
      */
     lastOriginalPhotoBlob =
         file;
@@ -467,8 +573,7 @@ async function importCompressedPhoto(file) {
         result.metadata;
 
     /*
-     * The still-frame tone track becomes the current
-     * ABMTV monitor waveform.
+     * The encoded ABMTV signal is the monitor track.
      */
     lastModulatedAudioBlob =
         result.monitorAudioBlob;
@@ -490,21 +595,124 @@ async function importCompressedPhoto(file) {
         enableSaveButton();
     }
 
+    if (
+        networkConnected &&
+        typeof sendCurrentAMMEFToNetwork ===
+            "function"
+    ) {
+        txtTxState.textContent =
+            "TX-PIC";
+
+        boxTxState.style.background =
+            "#770077";
+
+        txtStatus.textContent =
+            "STATUS: Sending photo AMMEF packet...";
+
+        txtStatus.style.color =
+            "#FFD700";
+
+        try {
+            await sendCurrentAMMEFToNetwork(
+                "photo"
+            );
+        }
+        catch (error) {
+            console.error(
+                "Photo network transmission failed:",
+                error
+            );
+
+            txtStatus.textContent =
+                `ERROR: ${
+                    error.message ||
+                    "Photo transmission failed."
+                }`;
+
+            txtStatus.style.color =
+                "#FF3333";
+
+            returnToReceiveMode();
+
+            throw error;
+        }
+    }
+
     txtStatus.textContent =
-        `STATUS: Image ready — original compressed file preserved, ` +
-        `${result.metadata.scanWidth}×${result.metadata.scanHeight} ` +
-        `ABMTV still frame encoded.`;
+        networkConnected
+            ? (
+                `STATUS: Photo [${file.name}] encoded and transmitted. ` +
+                "Original image preserved in AMMEF."
+            )
+            : (
+                `STATUS: Photo [${file.name}] encoded. ` +
+                "Original image preserved for AMMEF saving."
+            );
 
     txtStatus.style.color =
         "#00FF7F";
+
+    if (
+        typeof refreshMediaActionButtons ===
+        "function"
+    ) {
+        refreshMediaActionButtons();
+    }
+
+    setTimeout(
+        returnToReceiveMode,
+        1500
+    );
+}
+
+// ======================================================
+// Photo preview
+// ======================================================
+
+/**
+ * Escapes text before writing it into the preview window.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+function escapePhotoHtml(
+    value
+) {
+    return String(
+        value ||
+        ""
+    )
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            "\"",
+            "&quot;"
+        )
+        .replaceAll(
+            "'",
+            "&#039;"
+        );
 }
 
 /**
- * Opens the preserved original image in a new window.
+ * Opens the preserved original photo in a new window.
  */
 function previewOriginalPhoto() {
     if (
-        !(lastOriginalPhotoBlob instanceof Blob)
+        !(
+            lastOriginalPhotoBlob
+            instanceof Blob
+        )
     ) {
         txtStatus.textContent =
             "ERROR: No original image has been loaded.";
@@ -520,15 +728,17 @@ function previewOriginalPhoto() {
             lastOriginalPhotoBlob
         );
 
-    const photoWindow =
+    const previewWindow =
         window.open(
             "",
             "_blank",
             "width=900,height=700"
         );
 
-    if (!photoWindow) {
-        URL.revokeObjectURL(url);
+    if (!previewWindow) {
+        URL.revokeObjectURL(
+            url
+        );
 
         txtStatus.textContent =
             "ERROR: The browser blocked the image preview window.";
@@ -540,20 +750,20 @@ function previewOriginalPhoto() {
     }
 
     const safeTitle =
-        (
+        escapePhotoHtml(
             lastOriginalPhotoName ||
             "ArNet Photo"
-        )
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;");
+        );
 
-    photoWindow.document.write(`
+    previewWindow.document.write(`
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
+            <meta
+                name="viewport"
+                content="width=device-width, initial-scale=1.0"
+            >
 
             <title>${safeTitle}</title>
 
@@ -563,8 +773,8 @@ function previewOriginalPhoto() {
                     width: 100%;
                     height: 100%;
                     margin: 0;
-                    background: #000;
-                    color: #fff;
+                    background: #000000;
+                    color: #ffffff;
                     font-family: Consolas, monospace;
                 }
 
@@ -575,8 +785,9 @@ function previewOriginalPhoto() {
 
                 header {
                     padding: 10px;
-                    background: #111;
+                    background: #111111;
                     color: #00ffff;
+                    border-bottom: 1px solid #333333;
                 }
 
                 main {
@@ -594,7 +805,6 @@ function previewOriginalPhoto() {
                     max-width: 100%;
                     max-height: 100%;
                     object-fit: contain;
-                    image-rendering: auto;
                 }
             </style>
         </head>
@@ -612,9 +822,9 @@ function previewOriginalPhoto() {
         </html>
     `);
 
-    photoWindow.document.close();
+    previewWindow.document.close();
 
-    photoWindow.addEventListener(
+    previewWindow.addEventListener(
         "beforeunload",
         () => {
             URL.revokeObjectURL(
@@ -622,13 +832,18 @@ function previewOriginalPhoto() {
             );
         },
         {
-            once: true
+            once:
+                true
         }
     );
 }
 
+// ======================================================
+// File picker
+// ======================================================
+
 /**
- * Opens a file picker for still images.
+ * Opens the browser file picker for still images.
  */
 function openCompressedPhotoPicker() {
     const fileInput =
@@ -640,13 +855,24 @@ function openCompressedPhotoPicker() {
         "file";
 
     fileInput.accept =
-        "image/png,image/jpeg,image/webp,image/gif,image/bmp," +
-        ".png,.jpg,.jpeg,.webp,.gif,.bmp";
+        [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif",
+            "image/bmp",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".gif",
+            ".bmp"
+        ].join(",");
 
     fileInput.onchange =
         async event => {
             const file =
-                event.target.files[0];
+                event.target.files?.[0];
 
             if (!file) {
                 return;
@@ -664,7 +890,10 @@ function openCompressedPhotoPicker() {
                 );
 
                 txtStatus.textContent =
-                    `ERROR: ${error.message}`;
+                    `ERROR: ${
+                        error.message ||
+                        "Photo import failed."
+                    }`;
 
                 txtStatus.style.color =
                     "#FF3333";
@@ -680,4 +909,3 @@ function openCompressedPhotoPicker() {
 
     fileInput.click();
 }
-
