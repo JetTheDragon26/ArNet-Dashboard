@@ -47,6 +47,191 @@ function getNetworkFrequency() {
         : 4550;
 }
 
+async function sendCurrentAMMEFToNetwork(
+    transmissionKind = "audio"
+) {
+    if (
+        !networkSocket ||
+        networkSocket.readyState !== WebSocket.OPEN
+    ) {
+        throw new Error(
+            "ArNet is not connected."
+        );
+    }
+
+    async function receiveNetworkAMMEF(message) {
+    if (!message.data) {
+        return;
+    }
+
+    const bytes =
+        base64ToBytes(
+            message.data
+        );
+
+    const ammefBlob =
+        new Blob(
+            [bytes],
+            {
+                type:
+                    "application/x-ammef"
+            }
+        );
+
+    txtTxState.textContent =
+        "NET";
+
+    boxTxState.style.background =
+        "#004466";
+
+    setNetworkStatus(
+        `Receiving ${message.transmissionKind || "ArNet"} ` +
+        `from ${message.from || "UNKNOWN"} ` +
+        `on ${message.frequency} Vt.`,
+        "#00FFFF"
+    );
+
+    try {
+        const parsed =
+            await readAMMEFFile(
+                ammefBlob
+            );
+
+        await decodeReceivedAMMEF(
+            parsed,
+            message
+        );
+
+        refreshMediaActionButtons();
+    }
+    catch (error) {
+        console.error(
+            "Network AMMEF decode failed:",
+            error
+        );
+
+        setNetworkStatus(
+            "Received AMMEF could not be decoded.",
+            "#FF3333"
+        );
+    }
+}
+
+    async function decodeReceivedAMMEF(
+    parsed,
+    message
+) {
+    const kind =
+        message.transmissionKind ||
+        "audio";
+
+    if (
+        kind === "photo" &&
+        parsed.originalPhotoBlob
+    ) {
+        previewLoadedAMMEFPhoto();
+
+        setNetworkStatus(
+            `Decoded photo from ${message.from}.`,
+            "#00FF7F"
+        );
+
+        return;
+    }
+
+    if (
+        kind === "video" &&
+        parsed.originalVideoBlob
+    ) {
+        previewLoadedAMMEFVideo();
+
+        setNetworkStatus(
+            `Decoded video from ${message.from}.`,
+            "#00FF7F"
+        );
+
+        return;
+    }
+
+    const audioTrack =
+        parsed.cleanAudioBlob ||
+        parsed.monitorAudioBlob ||
+        parsed.telemetryAudioBlob ||
+        parsed.photoMonitorAudioBlob ||
+        parsed.videoMonitorAudioBlob;
+
+    if (!audioTrack) {
+        throw new Error(
+            "The transmission contains no usable payload."
+        );
+    }
+
+    const decoded =
+        await decodeAudioBlob(
+            audioTrack
+        );
+
+    lastAudioPcmArray =
+        decoded.pcmSamples;
+
+    await playAudioBlob(
+        audioTrack
+    );
+
+    setNetworkStatus(
+        `Decoded ${kind} transmission from ${message.from}.`,
+        "#00FF7F"
+    );
+}
+    
+    const ammefBlob =
+        await createAMMEFBlob();
+
+    const bytes =
+        new Uint8Array(
+            await ammefBlob.arrayBuffer()
+        );
+
+    sendNetworkMessage({
+        type:
+            networkTargetMode === "direct" &&
+            networkDirectTarget
+                ? "direct-ammef"
+                : "channel-ammef",
+
+        from:
+            getNetworkCallsign(),
+
+        to:
+            networkTargetMode === "direct"
+                ? networkDirectTarget
+                : null,
+
+        frequency:
+            getNetworkFrequency(),
+
+        mode:
+            comboMode.value,
+
+        transmissionKind,
+
+        mimeType:
+            "application/x-ammef",
+
+        data:
+            bytesToBase64(bytes),
+
+        timestamp:
+            new Date().toISOString()
+    });
+
+    setNetworkStatus(
+        `Sent ${transmissionKind} transmission on ` +
+        `${getNetworkFrequency()} Vt.`,
+        "#00FF7F"
+    );
+}
+
 function connectArNetNetwork() {
     if (
         networkSocket &&
@@ -317,7 +502,10 @@ async function handleNetworkMessage(event) {
     if (typeof event.data !== "string") {
         return;
     }
-
+    case "channel-ammef":
+    case "direct-ammef":
+    await receiveNetworkAMMEF(message);
+    break;
     let message;
 
     try {
