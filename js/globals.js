@@ -150,6 +150,15 @@ const txtCallsign =
 
 const chkUnencoded =
     document.getElementById("chkUnencoded");
+const txtMorseMessage =
+    document.getElementById(
+        "txtMorseMessage"
+    );
+
+const btnSendMorse =
+    document.getElementById(
+        "btnSendMorse"
+    );
 
 // ---------- Canvases ----------
 const canvasScope =
