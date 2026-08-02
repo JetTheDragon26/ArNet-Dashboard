@@ -3,7 +3,7 @@
 // WebSocket Networking and AMMEF Transport
 // ======================================================
 
-function setNetworkStatus(
+function setNetworkStatus(rec
     message,
     color = "#AAAAAA"
 ) {
@@ -681,10 +681,11 @@ async function receiveNetworkAMMEF(
                 ammefBlob
             );
 
-        await decodeReceivedAMMEF(
-            parsed,
-            message
-        );
+        await decodeIncomingAMMEFPacket(
+    parsed,
+    message
+);
+        
 
         if (
             typeof refreshMediaActionButtons ===
