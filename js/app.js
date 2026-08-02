@@ -148,6 +148,8 @@ function initializeApplication() {
 
     initializeUIControls();
 
+    connectArNetNetwork();
+    
     updateBandList();
     updateClock();
 
