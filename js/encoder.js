@@ -1,12 +1,16 @@
 // ======================================================
 // ArNet Transceiver
-// Audio and Morse Encoding
+// Audio, Voice, and Morse Encoding
 // ======================================================
 
 const ARNET_SAMPLE_RATE = 22050;
 
+// ======================================================
+// Shared encoder helpers
+// ======================================================
+
 /**
- * Enables the Save button after audio has been created.
+ * Enables the AMMEF Save button.
  */
 function enableSaveButton() {
     btnSave.disabled = false;
@@ -23,38 +27,80 @@ function returnToReceiveMode() {
 }
 
 /**
- * Converts an AudioBuffer channel into signed 16-bit PCM.
+ * Removes old photo/video payloads when a new audio-only
+ * transmission is prepared.
  *
- * This produces a clean audio copy suitable for storage
- * inside an AMMEF container.
+ * Without this cleanup, a voice or Morse transmission
+ * could accidentally contain a previously loaded image
+ * or video.
+ */
+function clearVisualPayloadsForAudioTransmission() {
+    lastOriginalVideoBlob = null;
+    lastOriginalVideoType = null;
+    lastOriginalVideoName = null;
+
+    lastVideoMonitorAudioBlob = null;
+    lastVideoMetadata = null;
+
+    lastOriginalPhotoBlob = null;
+    lastOriginalPhotoType = null;
+    lastOriginalPhotoName = null;
+
+    lastPhotoMonitorAudioBlob = null;
+    lastPhotoMetadata = null;
+}
+
+/**
+ * Converts floating-point Web Audio samples into signed
+ * 16-bit PCM.
  *
  * @param {Float32Array} channelData
  * @returns {Int16Array}
  */
 function floatChannelToPcm16(channelData) {
-    const pcmSamples = new Int16Array(channelData.length);
-
-    for (let i = 0; i < channelData.length; i++) {
-        const sample = Math.max(
-            -1,
-            Math.min(1, channelData[i])
+    const pcmSamples =
+        new Int16Array(
+            channelData.length
         );
 
-        pcmSamples[i] =
+    for (
+        let index = 0;
+        index < channelData.length;
+        index++
+    ) {
+        const sample =
+            Math.max(
+                -1,
+                Math.min(
+                    1,
+                    channelData[index]
+                )
+            );
+
+        pcmSamples[index] =
             sample < 0
-                ? Math.round(sample * 0x8000)
-                : Math.round(sample * 0x7FFF);
+                ? Math.round(
+                    sample * 0x8000
+                )
+                : Math.round(
+                    sample * 0x7FFF
+                );
     }
 
     return pcmSamples;
 }
 
+// ======================================================
+// Voice monitor encoder
+// ======================================================
+
 /**
- * Creates the modulated ArNet monitoring waveform from
- * clean microphone audio.
+ * Converts clean voice audio into the ArNet FM-style
+ * monitor waveform.
  *
- * This is the version heard locally when PTT finishes.
- * It is not the version stored inside AMMEF.
+ * The monitor waveform is what the transmitting station
+ * hears. The clean waveform remains inside AMMEF so the
+ * receiving station can recover clear audio.
  *
  * @param {Float32Array} rawChannel
  * @returns {Int16Array}
@@ -67,57 +113,87 @@ function encodeVoiceToFmMonitor(rawChannel) {
     let phasePilot = 0;
 
     const isWide =
-        comboBandwidth.value === "wide";
+        comboBandwidth.value ===
+        "wide";
 
     const carrierLevel =
-        parseFloat(sliderCarrier.value);
+        Number.parseFloat(
+            sliderCarrier.value
+        ) || 0;
 
     const deviationMultiplier =
-        isWide ? 1.0 : 0.25;
+        isWide
+            ? 1
+            : 0.25;
 
     /*
-     * The original code advances by two samples.
-     * This keeps the existing ArNet FM sound.
+     * Advancing by two samples preserves the sound of
+     * the original ArNet voice encoder.
      */
-    for (let i = 0; i < rawChannel.length; i += 2) {
-        const normalizedVoice = rawChannel[i];
-        const voiceAmplitude = Math.abs(normalizedVoice);
+    for (
+        let index = 0;
+        index < rawChannel.length;
+        index += 2
+    ) {
+        const normalizedVoice =
+            rawChannel[index];
+
+        const voiceAmplitude =
+            Math.abs(
+                normalizedVoice
+            );
 
         const modulatorFrequency =
             (
                 50 +
-                (120 * voiceAmplitude)
-            ) * deviationMultiplier;
+                (
+                    120 *
+                    voiceAmplitude
+                )
+            ) *
+            deviationMultiplier;
 
         const carrierFrequency =
             (
                 600 +
-                (3000 * voiceAmplitude)
-            ) * deviationMultiplier;
+                (
+                    3000 *
+                    voiceAmplitude
+                )
+            ) *
+            deviationMultiplier;
 
         const modulationIndex =
             (
                 8 +
-                (15 * voiceAmplitude)
-            ) * deviationMultiplier;
+                (
+                    15 *
+                    voiceAmplitude
+                )
+            ) *
+            deviationMultiplier;
 
         phaseModulator +=
             (
                 2 *
                 Math.PI *
                 modulatorFrequency
-            ) / ARNET_SAMPLE_RATE;
+            ) /
+            ARNET_SAMPLE_RATE;
 
         const modulationSignal =
             modulationIndex *
-            Math.sin(phaseModulator);
+            Math.sin(
+                phaseModulator
+            );
 
         phaseCarrier +=
             (
                 2 *
                 Math.PI *
                 carrierFrequency
-            ) / ARNET_SAMPLE_RATE;
+            ) /
+            ARNET_SAMPLE_RATE;
 
         const fmSignal =
             Math.sin(
@@ -127,43 +203,62 @@ function encodeVoiceToFmMonitor(rawChannel) {
 
         const outputGain =
             0.7 +
-            (0.3 * voiceAmplitude);
+            (
+                0.3 *
+                voiceAmplitude
+            );
 
         phasePilot +=
             (
                 2 *
                 Math.PI *
                 1000
-            ) / ARNET_SAMPLE_RATE;
+            ) /
+            ARNET_SAMPLE_RATE;
 
         const pilotSignal =
-            Math.sin(phasePilot) *
+            Math.sin(
+                phasePilot
+            ) *
             carrierLevel;
 
         const outputSample =
             13000 *
             (
-                (fmSignal * outputGain) +
+                (
+                    fmSignal *
+                    outputGain
+                ) +
                 pilotSignal
             );
 
         pcmSamples.push(
-            Math.round(outputSample)
+            Math.max(
+                -32768,
+                Math.min(
+                    32767,
+                    Math.round(
+                        outputSample
+                    )
+                )
+            )
         );
     }
 
-    return Int16Array.from(pcmSamples);
+    return Int16Array.from(
+        pcmSamples
+    );
 }
 
+// ======================================================
+// PTT recording
+// ======================================================
+
 /**
- * Starts or stops microphone PTT recording.
+ * Handles the PTT button.
  *
- * Press once:
- *   Begin microphone recording.
- *
- * Press again:
- *   Stop recording, create clean audio for AMMEF,
- *   create FM audio for local monitoring, and play it.
+ * First press begins recording.
+ * Second press stops and processes the recording.
  */
 async function handlePtt() {
     initAudioContext();
@@ -177,28 +272,44 @@ async function handlePtt() {
 }
 
 /**
- * Starts microphone capture.
+ * Begins microphone capture.
  */
 async function startPttRecording() {
     try {
         const stream =
-            await navigator.mediaDevices.getUserMedia({
-                audio: true
-            });
+            await navigator.mediaDevices
+                .getUserMedia({
+                    audio: true
+                });
 
         mediaRecorder =
-            new MediaRecorder(stream);
+            new MediaRecorder(
+                stream
+            );
 
         recordedChunks = [];
 
-        mediaRecorder.ondataavailable = event => {
-            if (event.data && event.data.size > 0) {
-                recordedChunks.push(event.data);
+        mediaRecorder.addEventListener(
+            "dataavailable",
+            event => {
+                if (
+                    event.data &&
+                    event.data.size > 0
+                ) {
+                    recordedChunks.push(
+                        event.data
+                    );
+                }
             }
-        };
+        );
 
-        mediaRecorder.onstop =
-            processPttRecording;
+        mediaRecorder.addEventListener(
+            "stop",
+            processPttRecording,
+            {
+                once: true
+            }
+        );
 
         mediaRecorder.start();
 
@@ -210,7 +321,8 @@ async function startPttRecording() {
         btnPtt.style.background =
             "darkred";
 
-        btnIdent.disabled = true;
+        btnIdent.disabled =
+            true;
 
         txtTxState.textContent =
             "REC";
@@ -235,23 +347,25 @@ async function startPttRecording() {
 
         txtStatus.style.color =
             "#FF3333";
+
+        isRecording = false;
     }
 }
 
 /**
- * Stops microphone capture and begins processing.
+ * Stops microphone capture.
  */
 function stopPttRecording() {
-    if (!mediaRecorder) {
+    if (
+        !mediaRecorder ||
+        mediaRecorder.state ===
+            "inactive"
+    ) {
         return;
     }
 
     mediaRecorder.stop();
 
-    /*
-     * Stop microphone tracks so the browser no longer
-     * shows the microphone as continuously active.
-     */
     if (mediaRecorder.stream) {
         for (
             const track of
@@ -269,131 +383,170 @@ function stopPttRecording() {
     btnPtt.style.background =
         "#880000";
 
-    btnIdent.disabled = false;
+    btnIdent.disabled =
+        false;
 
     txtStatus.textContent =
-        "STATUS: Processing FM Modulation...";
+        "STATUS: Processing ArNet FM modulation...";
 
     txtStatus.style.color =
         "yellow";
 }
 
 /**
- * Processes the finished microphone recording.
+ * Processes a completed PTT recording.
  *
  * Creates:
- * 1. Clean WAV for AMMEF storage.
- * 2. FM-modulated WAV for local monitoring.
+ *
+ * 1. A clean WAV track for receiver decoding.
+ * 2. An FM-style monitor track for local listening.
+ * 3. An AMMEF network packet when connected.
  */
 async function processPttRecording() {
     try {
-        if (!recordedChunks.length) {
+        if (
+            !recordedChunks.length
+        ) {
             throw new Error(
                 "No microphone audio was recorded."
             );
         }
+
+        clearVisualPayloadsForAudioTransmission();
 
         const recordedBlob =
             new Blob(
                 recordedChunks,
                 {
                     type:
-                        mediaRecorder.mimeType ||
+                        mediaRecorder
+                            ?.mimeType ||
                         "audio/webm"
                 }
             );
 
         const arrayBuffer =
-            await recordedBlob.arrayBuffer();
+            await recordedBlob
+                .arrayBuffer();
 
         const decodedAudio =
-            await audioCtx.decodeAudioData(
-                arrayBuffer
+            await audioCtx
+                .decodeAudioData(
+                    arrayBuffer.slice(0)
+                );
+
+        if (
+            decodedAudio.numberOfChannels <
+            1
+        ) {
+            throw new Error(
+                "The microphone recording contains no audio channel."
             );
+        }
 
         const rawChannel =
-            decodedAudio.getChannelData(0);
+            decodedAudio
+                .getChannelData(0);
 
-        // ------------------------------------------------
-        // Clean storage path
-        // ------------------------------------------------
+        // ----------------------------------------------
+        // Clean receiver track
+        // ----------------------------------------------
 
         const cleanPcmSamples =
-            floatChannelToPcm16(rawChannel);
+            floatChannelToPcm16(
+                rawChannel
+            );
 
-        /*
-         * createWavBuffer updates lastAudioPcmArray.
-         * This call creates the clean AMMEF payload first.
-         */
         lastCleanAudioBlob =
             createWavBuffer(
                 cleanPcmSamples,
                 decodedAudio.sampleRate
             );
 
-        // ------------------------------------------------
-        // FM local-monitor path
-        // ------------------------------------------------
+        // ----------------------------------------------
+        // Encoded FM monitor track
+        // ----------------------------------------------
 
         const modulatedPcmSamples =
             encodeVoiceToFmMonitor(
                 rawChannel
             );
 
-        /*
-         * Calling createWavBuffer again here makes the
-         * visualizer use the modulated samples.
-         */
         lastModulatedAudioBlob =
             createWavBuffer(
                 modulatedPcmSamples,
                 ARNET_SAMPLE_RATE
             );
 
-        // Hear the FM-modulated version.
+        /*
+         * The local station hears the encoded waveform.
+         */
+        lastAudioPcmArray =
+            modulatedPcmSamples;
+
         await playAudioBlob(
             lastModulatedAudioBlob
         );
 
         /*
-         * AMMEF saving uses lastProcessedAudioBlob.
-         * Point it at the clean recording after playback
-         * has been prepared.
+         * AMMEF uses the clean audio as its recoverable
+         * primary payload and the FM waveform as the
+         * monitor track.
          */
         lastProcessedAudioBlob =
             lastCleanAudioBlob;
-        if (networkConnected) {
-    try {
-        if (
-            networkTargetMode === "direct" &&
-            networkDirectTarget
-        ) {
-            await sendAudioBlobToNetwork(
-                lastCleanAudioBlob,
-                {
-                    directTarget:
-                        networkDirectTarget
-                }
-            );
-        }
-        else {
-            await sendAudioBlobToNetwork(
-                lastCleanAudioBlob
-            );
-        }
-    }
-    catch (error) {
-        console.error(
-            "Network transmission failed:",
-            error
-        );
-    }
-}
 
         enableSaveButton();
 
+        if (
+            networkConnected &&
+            typeof sendCurrentAMMEFToNetwork ===
+                "function"
+        ) {
+            txtTxState.textContent =
+                "TX";
+
+            boxTxState.style.background =
+                "#880000";
+
+            txtStatus.textContent =
+                "STATUS: Sending encoded voice AMMEF packet...";
+
+            txtStatus.style.color =
+                "#FFD700";
+
+            try {
+                await sendCurrentAMMEFToNetwork(
+                    "voice"
+                );
+            }
+            catch (networkError) {
+                console.error(
+                    "Network voice transmission failed:",
+                    networkError
+                );
+
+                txtStatus.textContent =
+                    `ERROR: ${networkError.message}`;
+
+                txtStatus.style.color =
+                    "#FF3333";
+
+                returnToReceiveMode();
+                return;
+            }
+        }
+
         txtStatus.textContent =
-            "STATUS: Transmission completed. Clean audio ready for AMMEF.";
+            networkConnected
+                ? (
+                    "STATUS: Voice transmission encoded, " +
+                    "sent, and ready for AMMEF saving."
+                )
+                : (
+                    "STATUS: Voice transmission encoded " +
+                    "and ready for AMMEF saving."
+                );
 
         txtStatus.style.color =
             "#00FF7F";
@@ -407,17 +560,27 @@ async function processPttRecording() {
         );
 
         txtStatus.textContent =
-            "ERROR: Failed to process microphone audio.";
+            `ERROR: ${
+                error.message ||
+                "Failed to process microphone audio."
+            }`;
 
         txtStatus.style.color =
             "#FF3333";
 
         returnToReceiveMode();
     }
+    finally {
+        recordedChunks = [];
+    }
 }
 
+// ======================================================
+// Morse IDENT encoder
+// ======================================================
+
 /**
- * Builds the IDENT Morse waveform.
+ * Generates a Morse identifier waveform.
  *
  * @param {string} callsign
  * @param {boolean} unencoded
@@ -432,18 +595,30 @@ function encodeMorseIdent(
     carrierLevel
 ) {
     const morse =
-        textToMorse(callsign);
+        textToMorse(
+            callsign
+        );
 
-    const dotDuration = 0.09;
+    const dotDuration =
+        0.09;
+
     const toneState = [];
 
     for (const symbol of morse) {
-        const duration =
-            symbol === "."
-                ? dotDuration
-                : symbol === "-"
-                    ? dotDuration * 3
-                    : dotDuration * 3.5;
+        let duration;
+
+        if (symbol === ".") {
+            duration =
+                dotDuration;
+        }
+        else if (symbol === "-") {
+            duration =
+                dotDuration * 3;
+        }
+        else {
+            duration =
+                dotDuration * 3.5;
+        }
 
         const sampleCount =
             Math.floor(
@@ -452,9 +627,9 @@ function encodeMorseIdent(
             );
 
         for (
-            let i = 0;
-            i < sampleCount;
-            i++
+            let index = 0;
+            index < sampleCount;
+            index++
         ) {
             toneState.push(
                 symbol !== " "
@@ -469,11 +644,13 @@ function encodeMorseIdent(
             );
 
         for (
-            let i = 0;
-            i < gapCount;
-            i++
+            let index = 0;
+            index < gapCount;
+            index++
         ) {
-            toneState.push(false);
+            toneState.push(
+                false
+            );
         }
     }
 
@@ -483,66 +660,89 @@ function encodeMorseIdent(
     let phaseTone = 0;
 
     const bandwidthFactor =
-        isWide ? 1.0 : 0.35;
+        isWide
+            ? 1
+            : 0.35;
 
     for (
-        let i = 0;
-        i < toneState.length;
-        i++
+        let index = 0;
+        index < toneState.length;
+        index++
     ) {
         const isKeyed =
-            toneState[i];
+            toneState[index];
 
-        let mixedOutput = 0;
+        let mixedOutput =
+            0;
 
         if (unencoded) {
             if (isKeyed) {
                 const toneFrequency =
-                    isWide ? 800 : 500;
+                    isWide
+                        ? 800
+                        : 500;
 
                 phaseTone +=
                     (
                         2 *
                         Math.PI *
                         toneFrequency
-                    ) / ARNET_SAMPLE_RATE;
+                    ) /
+                    ARNET_SAMPLE_RATE;
 
                 mixedOutput =
-                    Math.sin(phaseTone) *
+                    Math.sin(
+                        phaseTone
+                    ) *
                     0.95;
             }
         }
         else {
             const carrierFrequency =
                 isKeyed
-                    ? 1200 * bandwidthFactor
-                    : 600 * bandwidthFactor;
+                    ? (
+                        1200 *
+                        bandwidthFactor
+                    )
+                    : (
+                        600 *
+                        bandwidthFactor
+                    );
 
             const modulationIndex =
                 (
-                    isKeyed ? 14 : 0
-                ) * bandwidthFactor;
+                    isKeyed
+                        ? 14
+                        : 0
+                ) *
+                bandwidthFactor;
 
             const toneFrequency =
-                isKeyed ? 180 : 0;
+                isKeyed
+                    ? 180
+                    : 0;
 
             phaseTone +=
                 (
                     2 *
                     Math.PI *
                     toneFrequency
-                ) / ARNET_SAMPLE_RATE;
+                ) /
+                ARNET_SAMPLE_RATE;
 
             const modulationSignal =
                 modulationIndex *
-                Math.sin(phaseTone);
+                Math.sin(
+                    phaseTone
+                );
 
             phaseCarrier +=
                 (
                     2 *
                     Math.PI *
                     carrierFrequency
-                ) / ARNET_SAMPLE_RATE;
+                ) /
+                ARNET_SAMPLE_RATE;
 
             const fmSignal =
                 Math.sin(
@@ -565,18 +765,27 @@ function encodeMorseIdent(
         }
 
         pcmSamples.push(
-            Math.round(
-                18000 *
-                mixedOutput
+            Math.max(
+                -32768,
+                Math.min(
+                    32767,
+                    Math.round(
+                        18000 *
+                        mixedOutput
+                    )
+                )
             )
         );
     }
 
-    return Int16Array.from(pcmSamples);
+    return Int16Array.from(
+        pcmSamples
+    );
 }
 
 /**
- * Generates and plays the station IDENT.
+ * Generates, monitors, packages, and transmits the
+ * station Morse IDENT.
  */
 async function handleIdent() {
     const callsign =
@@ -585,11 +794,11 @@ async function handleIdent() {
             .toUpperCase();
 
     if (
-        callsign.length < 6 ||
-        callsign.length > 7
+        callsign.length < 3 ||
+        callsign.length > 20
     ) {
         txtStatus.textContent =
-            "ERROR: Callsign must be 6 or 7 characters long! (e.g. W1AW/1)";
+            "ERROR: Enter a callsign between 3 and 20 characters.";
 
         txtStatus.style.color =
             "#FF3333";
@@ -597,46 +806,119 @@ async function handleIdent() {
         return;
     }
 
+    clearVisualPayloadsForAudioTransmission();
+
     txtTxState.textContent =
         "IDENT";
 
     boxTxState.style.background =
         "#FF4500";
 
-    const unencoded =
-        chkUnencoded.checked;
-
-    const isWide =
-        comboBandwidth.value === "wide";
-
-    const carrierLevel =
-        parseFloat(sliderCarrier.value);
-
-    const identPcmSamples =
-        encodeMorseIdent(
-            callsign,
-            unencoded,
-            isWide,
-            carrierLevel
-        );
-
-    lastProcessedAudioBlob =
-        createWavBuffer(
-            identPcmSamples,
-            ARNET_SAMPLE_RATE
-        );
-
-    await playAudioBlob(
-        lastProcessedAudioBlob
-    );
-
-    enableSaveButton();
-
     txtStatus.textContent =
-        "STATUS: CW IDENT transmitted successfully.";
+        `STATUS: Encoding Morse IDENT for ${callsign}...`;
 
     txtStatus.style.color =
-        "#00FF7F";
+        "#FFD700";
+
+    try {
+        const unencoded =
+            chkUnencoded.checked;
+
+        const isWide =
+            comboBandwidth.value ===
+            "wide";
+
+        const carrierLevel =
+            Number.parseFloat(
+                sliderCarrier.value
+            ) || 0;
+
+        const identPcmSamples =
+            encodeMorseIdent(
+                callsign,
+                unencoded,
+                isWide,
+                carrierLevel
+            );
+
+        const identBlob =
+            createWavBuffer(
+                identPcmSamples,
+                ARNET_SAMPLE_RATE
+            );
+
+        /*
+         * The IDENT is an encoded monitor waveform rather
+         * than clean spoken audio.
+         */
+        lastCleanAudioBlob =
+            null;
+
+        lastModulatedAudioBlob =
+            identBlob;
+
+        lastProcessedAudioBlob =
+            identBlob;
+
+        lastAudioPcmArray =
+            identPcmSamples;
+
+        await playAudioBlob(
+            identBlob
+        );
+
+        enableSaveButton();
+
+        if (
+            networkConnected &&
+            typeof sendCurrentAMMEFToNetwork ===
+                "function"
+        ) {
+            txtTxState.textContent =
+                "TX-ID";
+
+            boxTxState.style.background =
+                "#AA4400";
+
+            txtStatus.textContent =
+                "STATUS: Sending Morse IDENT AMMEF packet...";
+
+            txtStatus.style.color =
+                "#FFD700";
+
+            await sendCurrentAMMEFToNetwork(
+                "ident"
+            );
+        }
+
+        txtStatus.textContent =
+            networkConnected
+                ? (
+                    `STATUS: Morse IDENT ${callsign} ` +
+                    "encoded and transmitted."
+                )
+                : (
+                    `STATUS: Morse IDENT ${callsign} encoded.`
+                );
+
+        txtStatus.style.color =
+            "#00FF7F";
+    }
+    catch (error) {
+        console.error(
+            "Morse IDENT error:",
+            error
+        );
+
+        txtStatus.textContent =
+            `ERROR: ${
+                error.message ||
+                "Could not create the Morse identifier."
+            }`;
+
+        txtStatus.style.color =
+            "#FF3333";
+    }
 
     setTimeout(
         returnToReceiveMode,
@@ -645,7 +927,7 @@ async function handleIdent() {
 }
 
 // ======================================================
-// Encoder Event Listeners
+// Encoder event listeners
 // ======================================================
 
 btnPtt.addEventListener(
