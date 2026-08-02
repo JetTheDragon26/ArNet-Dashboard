@@ -826,4 +826,15 @@ function initializeUIControls() {
     updateCarrierDisplay();
 
     refreshMediaActionButtons();
+
+    txtCallsign.addEventListener(
+    "change",
+    updateNetworkRegistration
+);
+
+txtCallsign.addEventListener(
+    "blur",
+    updateNetworkRegistration
+);
+    
 }
