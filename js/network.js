@@ -277,6 +277,27 @@ function base64ToBytes(base64) {
     return bytes;
 }
 
+function updateNetworkRegistration() {
+    if (
+        !networkConnected ||
+        !networkSocket ||
+        networkSocket.readyState !== WebSocket.OPEN
+    ) {
+        return;
+    }
+
+    sendNetworkMessage({
+        type: "register",
+        callsign: getNetworkCallsign(),
+        frequency: getNetworkFrequency()
+    });
+
+    setNetworkStatus(
+        `Registered as ${getNetworkCallsign()} on ${getNetworkFrequency()} Vt.`,
+        "#00FF7F"
+    );
+}
+
 async function handleNetworkMessage(event) {
     if (typeof event.data !== "string") {
         return;
