@@ -23,7 +23,9 @@ function getPcmRms(
     }
 
     const sampleRate =
-        ARNET_SAMPLE_RATE || 22050;
+    typeof ARNET_SAMPLE_RATE === "number"
+        ? ARNET_SAMPLE_RATE
+        : 22050;
 
     const currentSampleIndex =
         Math.floor(
