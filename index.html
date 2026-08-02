@@ -171,6 +171,80 @@
                 </div>
             </div>
         </section>
+<!-- Morse decoder display -->
+<section
+    class="border-box"
+    style="
+        margin-top: 8px;
+        margin-bottom: 8px;
+        padding: 7px;
+    "
+>
+    <div
+        style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        "
+    >
+        <span
+            style="
+                color: #FFCC00;
+                font-size: 10px;
+                font-weight: bold;
+            "
+        >
+            MORSE SIGNAL DECODER
+        </span>
+
+        <button
+            id="btnClearMorseDecode"
+            type="button"
+            style="
+                background: #442200;
+                color: #FFFFFF;
+                font-size: 9px;
+                font-weight: bold;
+                cursor: pointer;
+                padding: 3px 7px;
+            "
+        >
+            CLEAR
+        </button>
+    </div>
+
+    <div
+        id="txtMorseDecode"
+        style="
+            min-height: 42px;
+            max-height: 100px;
+            overflow-y: auto;
+            background: #080808;
+            border: 1px solid #554400;
+            color: #FFDD55;
+            font-family: Consolas, monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            padding: 7px;
+            box-sizing: border-box;
+        "
+    >
+        Waiting for Morse transmission...
+    </div>
+
+    <div
+        id="txtMorseDecodeInfo"
+        style="
+            color: #888888;
+            font-family: Consolas, monospace;
+            font-size: 9px;
+            margin-top: 4px;
+        "
+    >
+        No Morse signal received.
+    </div>
+</section>
 
         <!-- Transmit and configuration controls -->
         <section
