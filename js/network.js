@@ -295,6 +295,56 @@ function base64ToBytes(base64) {
 // AMMEF transmission
 // ======================================================
 
+async function getAudioBlobDurationMs(blob) {
+    if (!(blob instanceof Blob)) {
+        return 0;
+    }
+
+    initAudioContext();
+
+    const buffer =
+        await blob.arrayBuffer();
+
+    const decoded =
+        await audioCtx.decodeAudioData(
+            buffer.slice(0)
+        );
+
+    return Math.max(
+        0,
+        Math.round(
+            decoded.duration * 1000
+        )
+    );
+}
+
+async function getCurrentTransmissionDurationMs(
+    transmissionKind
+) {
+    const audioBlob =
+        transmissionKind === "video"
+            ? lastVideoMonitorAudioBlob
+            : transmissionKind === "photo"
+                ? lastPhotoMonitorAudioBlob
+                : lastCleanAudioBlob ||
+                  lastModulatedAudioBlob ||
+                  lastProcessedAudioBlob;
+
+    try {
+        return await getAudioBlobDurationMs(
+            audioBlob
+        );
+    }
+    catch (error) {
+        console.warn(
+            "Could not determine transmission duration:",
+            error
+        );
+
+        return 30000;
+    }
+}
+
 async function sendCurrentAMMEFToNetwork(
     transmissionKind = "audio"
 ) {
@@ -325,41 +375,54 @@ async function sendCurrentAMMEFToNetwork(
             networkDirectTarget
         );
 
-    const sent =
-        sendNetworkMessage({
-            type:
-                direct
-                    ? "direct-ammef"
-                    : "channel-ammef",
+const durationMs =
+    await getCurrentTransmissionDurationMs(
+        transmissionKind
+    );
 
-            from:
-                getNetworkCallsign(),
+  const sent =
+    sendNetworkMessage({
+        type:
+            direct
+                ? "direct-ammef"
+                : "channel-ammef",
 
-            to:
-                direct
-                    ? networkDirectTarget
-                    : null,
+        from:
+            getNetworkCallsign(),
 
-            frequency:
-                getNetworkFrequency(),
+        to:
+            direct
+                ? networkDirectTarget
+                : null,
 
-            mode:
-                comboMode.value,
+        frequency:
+            getNetworkFrequency(),
 
-            transmissionKind,
+        mode:
+            comboMode.value,
 
-            mimeType:
-                "application/x-ammef",
+        band:
+            comboBand.value,
 
-            data:
-                bytesToBase64(
-                    bytes
-                ),
+        bandwidth:
+            comboBandwidth.value,
 
-            timestamp:
-                new Date()
-                    .toISOString()
-        });
+        transmissionKind,
+
+        durationMs,
+
+        mimeType:
+            "application/x-ammef",
+
+        data:
+            bytesToBase64(
+                bytes
+            ),
+
+        timestamp:
+            new Date()
+                .toISOString()
+    });
 
     if (!sent) {
         throw new Error(
