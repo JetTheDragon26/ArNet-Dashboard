@@ -574,6 +574,103 @@ async function processPttRecording() {
         recordedChunks = [];
     }
 }
+//--------Morse-Code
+
+async function handleMorseMessage() {
+    const message =
+        txtMorseMessage.value
+            .trim()
+            .toUpperCase();
+
+    if (!message) {
+        txtStatus.textContent =
+            "ERROR: Type a Morse message first.";
+
+        txtStatus.style.color =
+            "#FF3333";
+
+        return;
+    }
+
+    clearVisualPayloadsForAudioTransmission();
+
+    txtTxState.textContent =
+        "MORSE";
+
+    boxTxState.style.background =
+        "#806000";
+
+    try {
+        const morsePcm =
+            encodeMorseIdent(
+                message,
+                chkUnencoded.checked,
+                comboBandwidth.value === "wide",
+                Number.parseFloat(
+                    sliderCarrier.value
+                ) || 0
+            );
+
+        const morseBlob =
+            createWavBuffer(
+                morsePcm,
+                ARNET_SAMPLE_RATE
+            );
+
+        lastCleanAudioBlob =
+            null;
+
+        lastModulatedAudioBlob =
+            morseBlob;
+
+        lastProcessedAudioBlob =
+            morseBlob;
+
+        lastAudioPcmArray =
+            morsePcm;
+
+        playAudioBlob(
+            morseBlob
+        ).catch(console.error);
+
+        enableSaveButton();
+
+        if (
+            networkConnected &&
+            typeof sendCurrentAMMEFToNetwork ===
+                "function"
+        ) {
+            await sendCurrentAMMEFToNetwork(
+                "morse"
+            );
+        }
+
+        txtStatus.textContent =
+            networkConnected
+                ? "STATUS: Morse message transmitted."
+                : "STATUS: Morse message encoded.";
+
+        txtStatus.style.color =
+            "#00FF7F";
+    }
+    catch (error) {
+        console.error(
+            "Morse message error:",
+            error
+        );
+
+        txtStatus.textContent =
+            `ERROR: ${error.message}`;
+
+        txtStatus.style.color =
+            "#FF3333";
+    }
+
+    setTimeout(
+        returnToReceiveMode,
+        1000
+    );
+}
 
 // ======================================================
 // Morse IDENT encoder
@@ -938,4 +1035,19 @@ btnPtt.addEventListener(
 btnIdent.addEventListener(
     "click",
     handleIdent
+);
+
+btnSendMorse.addEventListener(
+    "click",
+    handleMorseMessage
+);
+
+txtMorseMessage.addEventListener(
+    "keydown",
+    event => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            handleMorseMessage();
+        }
+    }
 );
