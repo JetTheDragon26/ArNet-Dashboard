@@ -159,7 +159,20 @@ const btnSendMorse =
     document.getElementById(
         "btnSendMorse"
     );
+const txtMorseDecode =
+    document.getElementById(
+        "txtMorseDecode"
+    );
 
+const txtMorseDecodeInfo =
+    document.getElementById(
+        "txtMorseDecodeInfo"
+    );
+
+const btnClearMorseDecode =
+    document.getElementById(
+        "btnClearMorseDecode"
+    );
 // ---------- Canvases ----------
 const canvasScope =
     document.getElementById("canvasScope");
