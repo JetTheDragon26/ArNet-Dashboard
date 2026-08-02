@@ -705,20 +705,33 @@ async function handleNetworkMessage(
             break;
 
         case "channel-audio":
-        case "direct-audio":
-            await receiveNetworkAudio(
-                message
-            );
+case "direct-audio":
+    if (
+        shouldReceiveNetworkTransmission(
+            message
+        )
+    ) {
+        await receiveNetworkAudio(
+            message
+        );
+    }
 
-            break;
+    break;
 
+           
         case "channel-ammef":
-        case "direct-ammef":
-            await receiveNetworkAMMEF(
-                message
-            );
+case "direct-ammef":
+    if (
+        shouldReceiveNetworkTransmission(
+            message
+        )
+    ) {
+        await receiveNetworkAMMEF(
+            message
+        );
+    }
 
-            break;
+    break;
 
         case "transmission-result":
             setNetworkStatus(
