@@ -1,35 +1,40 @@
-
 // ======================================================
 // ArNet Transceiver
-// Audio Decoder
+// Audio, WAV, and Incoming AMMEF Decoder
+// ======================================================
+
+// ======================================================
+// PCM conversion
 // ======================================================
 
 /**
- * Converts floating-point Web Audio samples into
- * signed 16-bit PCM samples.
+ * Converts Web Audio floating-point samples into signed
+ * 16-bit PCM samples.
  *
  * @param {Float32Array} channelData
  * @returns {Int16Array}
  */
 function convertFloatToPcm16(channelData) {
     const pcmSamples =
-        new Int16Array(channelData.length);
+        new Int16Array(
+            channelData.length
+        );
 
     for (
-        let i = 0;
-        i < channelData.length;
-        i++
+        let index = 0;
+        index < channelData.length;
+        index++
     ) {
         const sample =
             Math.max(
                 -1,
                 Math.min(
                     1,
-                    channelData[i]
+                    channelData[index]
                 )
             );
 
-        pcmSamples[i] =
+        pcmSamples[index] =
             sample < 0
                 ? Math.round(
                     sample * 0x8000
@@ -42,9 +47,12 @@ function convertFloatToPcm16(channelData) {
     return pcmSamples;
 }
 
+// ======================================================
+// Decode status text
+// ======================================================
+
 /**
- * Creates the status description shown after an
- * audio stream has been decoded.
+ * Creates a description for a decoded audio stream.
  *
  * @param {string} mode
  * @param {number} duration
@@ -55,51 +63,53 @@ function createDecodeSummary(
     duration
 ) {
     const formattedDuration =
-        duration.toFixed(2);
+        Number.isFinite(duration)
+            ? duration.toFixed(2)
+            : "0.00";
 
     if (mode === "ABMTV") {
         return (
-            "ABMTV Video Stream Frames Extracted " +
-            `(${formattedDuration}s). ` +
-            "Image subcarrier locked."
+            "ABMTV media stream decoded " +
+            `(${formattedDuration}s).`
         );
     }
 
     if (mode === "ABM") {
         return (
-            "ABM Audio Demodulated " +
-            `(${formattedDuration}s). ` +
-            "Data tones translated."
+            "ABM audio stream decoded " +
+            `(${formattedDuration}s).`
         );
     }
 
     return (
-        "AARM Stream Decoded " +
+        "AARM audio stream decoded " +
         `(${formattedDuration}s).`
     );
 }
 
+// ======================================================
+// General browser audio decoder
+// ======================================================
+
 /**
  * Decodes any browser-supported audio Blob or File.
  *
- * This is the central incoming-audio decoder.
- *
- * It can be used with:
- * - imported WAV files
- * - WAV data extracted from AMMEF
- * - future Internet audio packets
+ * This function does not automatically play the audio.
  *
  * @param {Blob} audioBlob
  * @returns {Promise<{
  *     audioBlob: Blob,
  *     decodedAudio: AudioBuffer,
+ *     channelData: Float32Array,
  *     pcmSamples: Int16Array,
  *     duration: number,
  *     sampleRate: number
  * }>}
  */
 async function decodeAudioBlob(audioBlob) {
-    if (!(audioBlob instanceof Blob)) {
+    if (
+        !(audioBlob instanceof Blob)
+    ) {
         throw new TypeError(
             "decodeAudioBlob requires a Blob or File."
         );
@@ -118,9 +128,8 @@ async function decodeAudioBlob(audioBlob) {
         await audioBlob.arrayBuffer();
 
     /*
-     * Slice the buffer before passing it into
-     * decodeAudioData. Some browsers may detach the
-     * supplied ArrayBuffer while decoding.
+     * Some browsers detach an ArrayBuffer while
+     * decodeAudioData is using it, so decode a copy.
      */
     const decodingBuffer =
         arrayBuffer.slice(0);
@@ -153,97 +162,229 @@ async function decodeAudioBlob(audioBlob) {
     return {
         audioBlob,
         decodedAudio,
+        channelData,
         pcmSamples,
+
         duration:
             decodedAudio.duration,
+
         sampleRate:
             decodedAudio.sampleRate
     };
 }
 
+// ======================================================
+// Imported WAV/audio encoding
+// ======================================================
+
 /**
- * Decodes and plays an imported WAV file.
+ * Converts an imported audio file into:
  *
- * This function handles the actual decoding and UI
- * updates. The file-picker listener will live in ui.js.
+ * 1. A normalized clean WAV for receiver recovery.
+ * 2. An ArNet FM-style monitor WAV.
+ *
+ * @param {Blob} inputBlob
+ * @returns {Promise<{
+ *     cleanBlob: Blob,
+ *     monitorBlob: Blob,
+ *     cleanPcm: Int16Array,
+ *     monitorPcm: Int16Array,
+ *     duration: number,
+ *     sampleRate: number
+ * }>}
+ */
+async function encodeImportedAudio(
+    inputBlob
+) {
+    const decoded =
+        await decodeAudioBlob(
+            inputBlob
+        );
+
+    /*
+     * Prevent an imported WAV transmission from carrying
+     * a previously loaded photo or video.
+     */
+    if (
+        typeof clearVisualPayloadsForAudioTransmission ===
+        "function"
+    ) {
+        clearVisualPayloadsForAudioTransmission();
+    }
+
+    const cleanPcm =
+        floatChannelToPcm16(
+            decoded.channelData
+        );
+
+    const monitorPcm =
+        encodeVoiceToFmMonitor(
+            decoded.channelData
+        );
+
+    const cleanBlob =
+        createWavBuffer(
+            cleanPcm,
+            decoded.sampleRate
+        );
+
+    const monitorBlob =
+        createWavBuffer(
+            monitorPcm,
+            ARNET_SAMPLE_RATE
+        );
+
+    lastCleanAudioBlob =
+        cleanBlob;
+
+    lastModulatedAudioBlob =
+        monitorBlob;
+
+    lastProcessedAudioBlob =
+        cleanBlob;
+
+    /*
+     * The scope and meter should follow the encoded
+     * waveform heard by the sender.
+     */
+    lastAudioPcmArray =
+        monitorPcm;
+
+    return {
+        cleanBlob,
+        monitorBlob,
+        cleanPcm,
+        monitorPcm,
+
+        duration:
+            decoded.duration,
+
+        sampleRate:
+            decoded.sampleRate
+    };
+}
+
+// ======================================================
+// Imported WAV loading and transmission
+// ======================================================
+
+/**
+ * Loads, encodes, monitors, and optionally transmits an
+ * imported WAV or browser-supported audio file.
+ *
+ * The sender hears the FM monitor signal.
+ * The receiver recovers the clean WAV inside AMMEF.
  *
  * @param {File|Blob} wavFile
  * @returns {Promise<object>}
  */
 async function decodeWavFile(wavFile) {
-    txtStatus.textContent =
+    if (
+        !(wavFile instanceof Blob)
+    ) {
+        throw new TypeError(
+            "decodeWavFile requires a File or Blob."
+        );
+    }
+
+    const fileName =
         wavFile instanceof File
-            ? `STATUS: Parsing file [${wavFile.name}] into DSP decoder...`
-            : "STATUS: Parsing incoming WAV audio into DSP decoder...";
+            ? wavFile.name
+            : "incoming audio";
+
+    txtStatus.textContent =
+        `STATUS: Loading [${fileName}] into the ArNet encoder...`;
 
     txtStatus.style.color =
         "yellow";
 
     txtTxState.textContent =
-        "DEC";
+        "ENC";
 
     boxTxState.style.background =
-        "#004466";
+        "#665500";
 
     try {
-        const result =
-            await decodeAudioBlob(
+        const encoded =
+            await encodeImportedAudio(
                 wavFile
             );
 
         /*
-         * Keep a normalized WAV copy rather than relying
-         * on the original upload's codec or bit depth.
+         * Locally play the encoded FM monitor waveform.
          */
-        const normalizedWavBlob =
-            createWavBuffer(
-                result.pcmSamples,
-                result.sampleRate
-            );
-
-        lastProcessedAudioBlob =
-            normalizedWavBlob;
-
-        const detectedMode =
-            comboMode.value;
-
-        const summary =
-            createDecodeSummary(
-                detectedMode,
-                result.duration
-            );
-
-        txtStatus.textContent =
-            `STATUS: ${summary}`;
-
-        txtStatus.style.color =
-            "#00FF7F";
-
         await playAudioBlob(
-            normalizedWavBlob
+            encoded.monitorBlob
         );
 
         enableSaveButton();
 
+        const summary =
+            createDecodeSummary(
+                comboMode.value,
+                encoded.duration
+            );
+
+        if (
+            networkConnected &&
+            typeof sendCurrentAMMEFToNetwork ===
+                "function"
+        ) {
+            txtTxState.textContent =
+                "TX-WAV";
+
+            boxTxState.style.background =
+                "#884400";
+
+            txtStatus.textContent =
+                "STATUS: Sending encoded WAV AMMEF packet...";
+
+            txtStatus.style.color =
+                "#FFD700";
+
+            await sendCurrentAMMEFToNetwork(
+                "wav"
+            );
+
+            txtStatus.textContent =
+                `STATUS: ${summary} ` +
+                "Encoded WAV transmitted successfully.";
+        }
+        else {
+            txtStatus.textContent =
+                `STATUS: ${summary} ` +
+                "Encoded WAV ready for AMMEF saving.";
+        }
+
+        txtStatus.style.color =
+            "#00FF7F";
+
         setTimeout(
             returnToReceiveMode,
-            3000
+            1500
         );
 
         return {
-            ...result,
-            audioBlob:
-                normalizedWavBlob
+            ...encoded,
+
+            sourceFile:
+                wavFile,
+
+            transmissionKind:
+                "wav"
         };
     }
     catch (error) {
         console.error(
-            "WAV decode error:",
+            "WAV processing error:",
             error
         );
 
         txtStatus.textContent =
-            "ERROR: Failed to parse or decode WAV file format.";
+            `ERROR: ${
+                error.message ||
+                "Failed to process the audio file."
+            }`;
 
         txtStatus.style.color =
             "#FF3333";
@@ -254,11 +395,413 @@ async function decodeWavFile(wavFile) {
     }
 }
 
+// ======================================================
+// Incoming Internet AMMEF decoding
+// ======================================================
+
 /**
- * Decodes an audio Blob without automatically playing it.
+ * Copies parsed AMMEF contents into the shared dashboard
+ * state so playback and preview buttons work normally.
  *
- * This will be useful later when Internet packets need
- * to be inspected or queued before playback.
+ * @param {object} parsed
+ */
+function restoreParsedAMMEFState(parsed) {
+    lastLoadedAMMEFMetadata =
+        parsed.metadata ||
+        null;
+
+    lastLoadedAMMEFCleanBlob =
+        parsed.cleanAudioBlob ||
+        null;
+
+    lastLoadedAMMEFMonitorBlob =
+        parsed.monitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFTelemetryBlob =
+        parsed.telemetryAudioBlob ||
+        null;
+
+    lastLoadedAMMEFVideoMonitorBlob =
+        parsed.videoMonitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFPhotoMonitorBlob =
+        parsed.photoMonitorAudioBlob ||
+        null;
+
+    lastLoadedAMMEFVideoBlob =
+        parsed.originalVideoBlob ||
+        null;
+
+    lastLoadedAMMEFVideoName =
+        parsed.originalVideoName ||
+        null;
+
+    lastLoadedAMMEFVideoType =
+        parsed.originalVideoType ||
+        null;
+
+    lastLoadedAMMEFPhotoBlob =
+        parsed.originalPhotoBlob ||
+        null;
+
+    lastLoadedAMMEFPhotoName =
+        parsed.originalPhotoName ||
+        null;
+
+    lastLoadedAMMEFPhotoType =
+        parsed.originalPhotoType ||
+        null;
+
+    /*
+     * Restore the ordinary media variables as well.
+     */
+    lastOriginalVideoBlob =
+        parsed.originalVideoBlob ||
+        null;
+
+    lastOriginalVideoName =
+        parsed.originalVideoName ||
+        null;
+
+    lastOriginalVideoType =
+        parsed.originalVideoType ||
+        null;
+
+    lastVideoMonitorAudioBlob =
+        parsed.videoMonitorAudioBlob ||
+        null;
+
+    lastOriginalPhotoBlob =
+        parsed.originalPhotoBlob ||
+        null;
+
+    lastOriginalPhotoName =
+        parsed.originalPhotoName ||
+        null;
+
+    lastOriginalPhotoType =
+        parsed.originalPhotoType ||
+        null;
+
+    lastPhotoMonitorAudioBlob =
+        parsed.photoMonitorAudioBlob ||
+        null;
+
+    lastAMMEFData =
+        parsed;
+}
+
+/**
+ * Decodes an AMMEF packet received over the Internet.
+ *
+ * Voice and WAV:
+ *   Extract and play the clean recovered WAV.
+ *
+ * Morse IDENT:
+ *   Play the encoded Morse monitor WAV.
+ *
+ * Photo:
+ *   Restore the original photo and optionally play its
+ *   ABMTV monitor tones.
+ *
+ * Video:
+ *   Restore the original video and optionally play its
+ *   ABMTV monitor tones.
+ *
+ * @param {object} parsed
+ * @param {object} message
+ * @returns {Promise<object>}
+ */
+async function decodeIncomingAMMEFPacket(
+    parsed,
+    message = {}
+) {
+    if (
+        !parsed ||
+        typeof parsed !== "object"
+    ) {
+        throw new TypeError(
+            "A parsed AMMEF packet is required."
+        );
+    }
+
+    const transmissionKind =
+        message.transmissionKind ||
+        parsed.metadata?.transmissionKind ||
+        "audio";
+
+    const sender =
+        message.from ||
+        parsed.metadata?.callsign ||
+        "UNKNOWN";
+
+    txtTxState.textContent =
+        "DEC";
+
+    boxTxState.style.background =
+        "#004466";
+
+    txtStatus.textContent =
+        `STATUS: Decoding ${transmissionKind} packet from ${sender}...`;
+
+    txtStatus.style.color =
+        "#00FFFF";
+
+    restoreParsedAMMEFState(
+        parsed
+    );
+
+    // --------------------------------------------------
+    // Photo decoding
+    // --------------------------------------------------
+
+    if (
+        transmissionKind === "photo" &&
+        parsed.originalPhotoBlob
+    ) {
+        if (
+            parsed.photoMonitorAudioBlob
+        ) {
+            const monitorResult =
+                await decodeAudioBlob(
+                    parsed.photoMonitorAudioBlob
+                );
+
+            lastAudioPcmArray =
+                monitorResult.pcmSamples;
+
+            await playAudioBlob(
+                parsed.photoMonitorAudioBlob
+            );
+        }
+
+        txtStatus.textContent =
+            `STATUS: Photo from ${sender} decoded. ` +
+            "Use ORIGINAL PHOTO to view it.";
+
+        txtStatus.style.color =
+            "#00FF7F";
+
+        if (
+            typeof refreshMediaActionButtons ===
+            "function"
+        ) {
+            refreshMediaActionButtons();
+        }
+
+        setTimeout(
+            returnToReceiveMode,
+            1500
+        );
+
+        return {
+            type:
+                "photo",
+
+            sender,
+
+            originalBlob:
+                parsed.originalPhotoBlob,
+
+            monitorBlob:
+                parsed.photoMonitorAudioBlob ||
+                null
+        };
+    }
+
+    // --------------------------------------------------
+    // Video decoding
+    // --------------------------------------------------
+
+    if (
+        transmissionKind === "video" &&
+        parsed.originalVideoBlob
+    ) {
+        if (
+            parsed.videoMonitorAudioBlob
+        ) {
+            const monitorResult =
+                await decodeAudioBlob(
+                    parsed.videoMonitorAudioBlob
+                );
+
+            lastAudioPcmArray =
+                monitorResult.pcmSamples;
+
+            await playAudioBlob(
+                parsed.videoMonitorAudioBlob
+            );
+        }
+
+        txtStatus.textContent =
+            `STATUS: Video from ${sender} decoded. ` +
+            "Use ORIGINAL VIDEO to view it.";
+
+        txtStatus.style.color =
+            "#00FF7F";
+
+        if (
+            typeof refreshMediaActionButtons ===
+            "function"
+        ) {
+            refreshMediaActionButtons();
+        }
+
+        setTimeout(
+            returnToReceiveMode,
+            1500
+        );
+
+        return {
+            type:
+                "video",
+
+            sender,
+
+            originalBlob:
+                parsed.originalVideoBlob,
+
+            monitorBlob:
+                parsed.videoMonitorAudioBlob ||
+                null
+        };
+    }
+
+    // --------------------------------------------------
+    // Voice, WAV, IDENT, and general audio decoding
+    // --------------------------------------------------
+
+    let decodedAudioTrack =
+        null;
+
+    let selectedTrackName =
+        null;
+
+    /*
+     * Voice and imported WAV packets normally contain a
+     * clean WAV, so that is always preferred.
+     */
+    if (
+        parsed.cleanAudioBlob
+    ) {
+        decodedAudioTrack =
+            parsed.cleanAudioBlob;
+
+        selectedTrackName =
+            "clean";
+    }
+    /*
+     * Morse IDENT normally contains only its encoded
+     * monitor waveform.
+     */
+    else if (
+        parsed.monitorAudioBlob
+    ) {
+        decodedAudioTrack =
+            parsed.monitorAudioBlob;
+
+        selectedTrackName =
+            "monitor";
+    }
+    else if (
+        parsed.telemetryAudioBlob
+    ) {
+        decodedAudioTrack =
+            parsed.telemetryAudioBlob;
+
+        selectedTrackName =
+            "telemetry";
+    }
+    else if (
+        parsed.photoMonitorAudioBlob
+    ) {
+        decodedAudioTrack =
+            parsed.photoMonitorAudioBlob;
+
+        selectedTrackName =
+            "photo-monitor";
+    }
+    else if (
+        parsed.videoMonitorAudioBlob
+    ) {
+        decodedAudioTrack =
+            parsed.videoMonitorAudioBlob;
+
+        selectedTrackName =
+            "video-monitor";
+    }
+
+    if (!decodedAudioTrack) {
+        throw new Error(
+            "The AMMEF packet contains no decodable signal."
+        );
+    }
+
+    const decoded =
+        await decodeAudioBlob(
+            decodedAudioTrack
+        );
+
+    lastAudioPcmArray =
+        decoded.pcmSamples;
+
+    lastProcessedAudioBlob =
+        decodedAudioTrack;
+
+    await playAudioBlob(
+        decodedAudioTrack
+    );
+
+    txtStatus.textContent =
+        `STATUS: ${transmissionKind} from ${sender} decoded ` +
+        `using the ${selectedTrackName} signal.`;
+
+    txtStatus.style.color =
+        "#00FF7F";
+
+    if (
+        typeof refreshMediaActionButtons ===
+        "function"
+    ) {
+        refreshMediaActionButtons();
+    }
+
+    setTimeout(
+        returnToReceiveMode,
+        1500
+    );
+
+    return {
+        type:
+            transmissionKind,
+
+        sender,
+
+        selectedTrack:
+            selectedTrackName,
+
+        decodedAudioBlob:
+            decodedAudioTrack,
+
+        duration:
+            decoded.duration,
+
+        sampleRate:
+            decoded.sampleRate,
+
+        pcmSamples:
+            decoded.pcmSamples
+    };
+}
+
+// ======================================================
+// Manual inspection and raw monitoring
+// ======================================================
+
+/**
+ * Decodes an audio Blob without playing it.
  *
  * @param {Blob} audioBlob
  * @returns {Promise<object>}
@@ -280,18 +823,18 @@ async function inspectAudioBlob(audioBlob) {
 }
 
 /**
- * Plays raw encoded audio without performing any
- * additional ArNet decoding.
- *
- * This will be used by the future "RAW AMMEF MONITOR"
- * button so the user can hear the stored tones directly.
+ * Plays an encoded waveform without extracting a clean
+ * AMMEF track.
  *
  * @param {Blob} rawAudioBlob
+ * @returns {Promise<object>}
  */
 async function monitorRawAudio(
     rawAudioBlob
 ) {
-    if (!(rawAudioBlob instanceof Blob)) {
+    if (
+        !(rawAudioBlob instanceof Blob)
+    ) {
         throw new TypeError(
             "monitorRawAudio requires a Blob."
         );
@@ -347,4 +890,3 @@ async function monitorRawAudio(
         throw error;
     }
 }
-
