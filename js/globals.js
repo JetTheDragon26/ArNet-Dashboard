@@ -62,6 +62,21 @@ let lastOriginalPhotoName = null;
 let lastPhotoMonitorAudioBlob = null;
 let lastPhotoMetadata = null;
 
+// ---------- Networking ----------
+let networkSocket = null;
+let networkConnected = false;
+
+let networkServerUrl = "ws://localhost:8080";
+
+let networkStationId = null;
+let networkCurrentFrequency = 4550;
+
+let networkTargetMode = "channel";
+let networkDirectTarget = "";
+
+let networkListenerCount = 0;
+let networkBusy = false;
+
 // ---------- Display ----------
 let isScopeMode = true;
 
