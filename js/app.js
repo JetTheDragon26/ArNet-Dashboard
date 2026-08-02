@@ -148,22 +148,39 @@ function initializeApplication() {
 
     initializeUIControls();
 
+/*
+ * Start the normal dashboard before attempting
+ * the optional network connection.
+ */
+updateBandList();
+updateClock();
+
+setInterval(
+    updateClock,
+    1000
+);
+
+startDisplayLoop();
+
+setStatus(
+    "ArNet ready.",
+    "#00FF7F"
+);
+
+try {
     connectArNetNetwork();
-    
-    updateBandList();
-    updateClock();
-
-    setInterval(
-        updateClock,
-        1000
+}
+catch (error) {
+    console.error(
+        "Network startup failed:",
+        error
     );
-
-    startDisplayLoop();
 
     setStatus(
-        "ArNet ready.",
-        "#00FF7F"
+        "ArNet ready — relay unavailable.",
+        "#FFAA00"
     );
+}
 }
 
 window.addEventListener(
