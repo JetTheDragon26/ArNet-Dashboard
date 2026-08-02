@@ -1,29 +1,39 @@
 // ======================================================
 // ArNet Transceiver
-// WebSocket Networking
+// WebSocket Networking and AMMEF Transport
 // ======================================================
 
-function setNetworkStatus(message, color = "#AAAAAA") {
-    console.log("[ArNet Network]", message);
+function setNetworkStatus(
+    message,
+    color = "#AAAAAA"
+) {
+    console.log(
+        "[ArNet Network]",
+        message
+    );
 
-    if (typeof setStatus === "function") {
-        setStatus(message, color);
-    }
-}
-
-function updateNetworkRegistration() {
     if (
-        !networkSocket ||
-        networkSocket.readyState !== WebSocket.OPEN
+        typeof setStatus ===
+        "function"
     ) {
+        setStatus(
+            message,
+            color
+        );
+
         return;
     }
 
-    sendNetworkMessage({
-        type: "register",
-        callsign: getNetworkCallsign(),
-        frequency: getNetworkFrequency()
-    });
+    if (txtStatus) {
+        txtStatus.textContent =
+            message.startsWith("STATUS:") ||
+            message.startsWith("ERROR:")
+                ? message
+                : `STATUS: ${message}`;
+
+        txtStatus.style.color =
+            color;
+    }
 }
 
 function getNetworkCallsign() {
@@ -47,197 +57,46 @@ function getNetworkFrequency() {
         : 4550;
 }
 
-async function sendCurrentAMMEFToNetwork(
-    transmissionKind = "audio"
-) {
+function updateNetworkRegistration() {
     if (
+        !networkConnected ||
         !networkSocket ||
-        networkSocket.readyState !== WebSocket.OPEN
+        networkSocket.readyState !==
+            WebSocket.OPEN
     ) {
-        throw new Error(
-            "ArNet is not connected."
-        );
-    }
-
-    async function receiveNetworkAMMEF(message) {
-    if (!message.data) {
         return;
     }
-
-    const bytes =
-        base64ToBytes(
-            message.data
-        );
-
-    const ammefBlob =
-        new Blob(
-            [bytes],
-            {
-                type:
-                    "application/x-ammef"
-            }
-        );
-
-    txtTxState.textContent =
-        "NET";
-
-    boxTxState.style.background =
-        "#004466";
-
-    setNetworkStatus(
-        `Receiving ${message.transmissionKind || "ArNet"} ` +
-        `from ${message.from || "UNKNOWN"} ` +
-        `on ${message.frequency} Vt.`,
-        "#00FFFF"
-    );
-
-    try {
-        const parsed =
-            await readAMMEFFile(
-                ammefBlob
-            );
-
-        await decodeReceivedAMMEF(
-            parsed,
-            message
-        );
-
-        refreshMediaActionButtons();
-    }
-    catch (error) {
-        console.error(
-            "Network AMMEF decode failed:",
-            error
-        );
-
-        setNetworkStatus(
-            "Received AMMEF could not be decoded.",
-            "#FF3333"
-        );
-    }
-}
-
-    async function decodeReceivedAMMEF(
-    parsed,
-    message
-) {
-    const kind =
-        message.transmissionKind ||
-        "audio";
-
-    if (
-        kind === "photo" &&
-        parsed.originalPhotoBlob
-    ) {
-        previewLoadedAMMEFPhoto();
-
-        setNetworkStatus(
-            `Decoded photo from ${message.from}.`,
-            "#00FF7F"
-        );
-
-        return;
-    }
-
-    if (
-        kind === "video" &&
-        parsed.originalVideoBlob
-    ) {
-        previewLoadedAMMEFVideo();
-
-        setNetworkStatus(
-            `Decoded video from ${message.from}.`,
-            "#00FF7F"
-        );
-
-        return;
-    }
-
-    const audioTrack =
-        parsed.cleanAudioBlob ||
-        parsed.monitorAudioBlob ||
-        parsed.telemetryAudioBlob ||
-        parsed.photoMonitorAudioBlob ||
-        parsed.videoMonitorAudioBlob;
-
-    if (!audioTrack) {
-        throw new Error(
-            "The transmission contains no usable payload."
-        );
-    }
-
-    const decoded =
-        await decodeAudioBlob(
-            audioTrack
-        );
-
-    lastAudioPcmArray =
-        decoded.pcmSamples;
-
-    await playAudioBlob(
-        audioTrack
-    );
-
-    setNetworkStatus(
-        `Decoded ${kind} transmission from ${message.from}.`,
-        "#00FF7F"
-    );
-}
-    
-    const ammefBlob =
-        await createAMMEFBlob();
-
-    const bytes =
-        new Uint8Array(
-            await ammefBlob.arrayBuffer()
-        );
 
     sendNetworkMessage({
         type:
-            networkTargetMode === "direct" &&
-            networkDirectTarget
-                ? "direct-ammef"
-                : "channel-ammef",
+            "register",
 
-        from:
+        callsign:
             getNetworkCallsign(),
 
-        to:
-            networkTargetMode === "direct"
-                ? networkDirectTarget
-                : null,
-
         frequency:
-            getNetworkFrequency(),
-
-        mode:
-            comboMode.value,
-
-        transmissionKind,
-
-        mimeType:
-            "application/x-ammef",
-
-        data:
-            bytesToBase64(bytes),
-
-        timestamp:
-            new Date().toISOString()
+            getNetworkFrequency()
     });
 
     setNetworkStatus(
-        `Sent ${transmissionKind} transmission on ` +
-        `${getNetworkFrequency()} Vt.`,
+        `Registered as ${getNetworkCallsign()} ` +
+        `on ${getNetworkFrequency()} Vt.`,
         "#00FF7F"
     );
 }
+
+// ======================================================
+// Connection handling
+// ======================================================
 
 function connectArNetNetwork() {
     if (
         networkSocket &&
         (
-            networkSocket.readyState === WebSocket.OPEN ||
-            networkSocket.readyState === WebSocket.CONNECTING
+            networkSocket.readyState ===
+                WebSocket.OPEN ||
+            networkSocket.readyState ===
+                WebSocket.CONNECTING
         )
     ) {
         return;
@@ -259,13 +118,15 @@ function connectArNetNetwork() {
     networkSocket.addEventListener(
         "open",
         () => {
-            networkConnected = true;
+            networkConnected =
+                true;
 
             networkCurrentFrequency =
                 getNetworkFrequency();
 
             sendNetworkMessage({
-                type: "register",
+                type:
+                    "register",
 
                 callsign:
                     getNetworkCallsign(),
@@ -275,7 +136,8 @@ function connectArNetNetwork() {
             });
 
             setNetworkStatus(
-                `Connected to ArNet on ${networkCurrentFrequency} Vt.`,
+                `Connected as ${getNetworkCallsign()} ` +
+                `on ${networkCurrentFrequency} Vt.`,
                 "#00FF7F"
             );
         }
@@ -289,8 +151,11 @@ function connectArNetNetwork() {
     networkSocket.addEventListener(
         "close",
         () => {
-            networkConnected = false;
-            networkBusy = false;
+            networkConnected =
+                false;
+
+            networkBusy =
+                false;
 
             setNetworkStatus(
                 "Disconnected from ArNet relay.",
@@ -308,7 +173,7 @@ function connectArNetNetwork() {
             );
 
             setNetworkStatus(
-                "Network connection failed.",
+                `Network connection failed: ${networkServerUrl}`,
                 "#FF3333"
             );
         }
@@ -316,13 +181,15 @@ function connectArNetNetwork() {
 }
 
 function disconnectArNetNetwork() {
-    if (!networkSocket) {
-        return;
+    if (networkSocket) {
+        networkSocket.close();
     }
 
-    networkSocket.close();
-    networkSocket = null;
-    networkConnected = false;
+    networkSocket =
+        null;
+
+    networkConnected =
+        false;
 }
 
 function sendNetworkMessage(message) {
@@ -348,7 +215,11 @@ function tuneNetworkFrequency(frequency) {
             10
         );
 
-    if (!Number.isFinite(numericFrequency)) {
+    if (
+        !Number.isFinite(
+            numericFrequency
+        )
+    ) {
         return;
     }
 
@@ -357,84 +228,25 @@ function tuneNetworkFrequency(frequency) {
 
     if (networkConnected) {
         sendNetworkMessage({
-            type: "tune",
+            type:
+                "tune",
+
             frequency:
                 numericFrequency
         });
     }
 }
 
-async function sendAudioBlobToNetwork(
-    audioBlob,
-    options = {}
-) {
-    if (!(audioBlob instanceof Blob)) {
-        throw new TypeError(
-            "sendAudioBlobToNetwork requires an audio Blob."
-        );
-    }
-
-    if (
-        !networkSocket ||
-        networkSocket.readyState !==
-            WebSocket.OPEN
-    ) {
-        throw new Error(
-            "ArNet is not connected."
-        );
-    }
-
-    const arrayBuffer =
-        await audioBlob.arrayBuffer();
-
-    const bytes =
-        new Uint8Array(arrayBuffer);
-
-    const base64 =
-        bytesToBase64(bytes);
-
-    sendNetworkMessage({
-        type:
-            options.directTarget
-                ? "direct-audio"
-                : "channel-audio",
-
-        from:
-            getNetworkCallsign(),
-
-        to:
-            options.directTarget ||
-            null,
-
-        frequency:
-            getNetworkFrequency(),
-
-        mode:
-            comboMode.value,
-
-        mimeType:
-            audioBlob.type ||
-            "audio/wav",
-
-        audio:
-            base64,
-
-        timestamp:
-            new Date().toISOString()
-    });
-
-    setNetworkStatus(
-        options.directTarget
-            ? `Sent transmission to ${options.directTarget}.`
-            : `Sent transmission on ${getNetworkFrequency()} Vt.`,
-        "#00FF7F"
-    );
-}
+// ======================================================
+// Base64 helpers
+// ======================================================
 
 function bytesToBase64(bytes) {
-    let binary = "";
+    let binary =
+        "";
 
-    const chunkSize = 0x8000;
+    const chunkSize =
+        0x8000;
 
     for (
         let offset = 0;
@@ -471,60 +283,231 @@ function base64ToBytes(base64) {
         index++
     ) {
         bytes[index] =
-            binary.charCodeAt(index);
+            binary.charCodeAt(
+                index
+            );
     }
 
     return bytes;
 }
 
-function updateNetworkRegistration() {
+// ======================================================
+// AMMEF transmission
+// ======================================================
+
+async function sendCurrentAMMEFToNetwork(
+    transmissionKind = "audio"
+) {
     if (
-        !networkConnected ||
         !networkSocket ||
-        networkSocket.readyState !== WebSocket.OPEN
+        networkSocket.readyState !==
+            WebSocket.OPEN
     ) {
-        return;
+        throw new Error(
+            "ArNet is not connected."
+        );
     }
 
-    sendNetworkMessage({
-        type: "register",
-        callsign: getNetworkCallsign(),
-        frequency: getNetworkFrequency()
-    });
+    const ammefBlob =
+        await createAMMEFBlob();
+
+    const bytes =
+        new Uint8Array(
+            await ammefBlob.arrayBuffer()
+        );
+
+    const direct =
+        networkTargetMode ===
+            "direct" &&
+        Boolean(
+            networkDirectTarget
+        );
+
+    const sent =
+        sendNetworkMessage({
+            type:
+                direct
+                    ? "direct-ammef"
+                    : "channel-ammef",
+
+            from:
+                getNetworkCallsign(),
+
+            to:
+                direct
+                    ? networkDirectTarget
+                    : null,
+
+            frequency:
+                getNetworkFrequency(),
+
+            mode:
+                comboMode.value,
+
+            transmissionKind,
+
+            mimeType:
+                "application/x-ammef",
+
+            data:
+                bytesToBase64(
+                    bytes
+                ),
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+
+    if (!sent) {
+        throw new Error(
+            "The relay connection closed before transmission."
+        );
+    }
 
     setNetworkStatus(
-        `Registered as ${getNetworkCallsign()} on ${getNetworkFrequency()} Vt.`,
+        direct
+            ? (
+                `Sent ${transmissionKind} ` +
+                `to ${networkDirectTarget}.`
+            )
+            : (
+                `Sent ${transmissionKind} on ` +
+                `${getNetworkFrequency()} Vt.`
+            ),
         "#00FF7F"
     );
 }
 
-async function handleNetworkMessage(event) {
-    if (typeof event.data !== "string") {
+// ======================================================
+// Compatibility audio-only transport
+// ======================================================
+
+async function sendAudioBlobToNetwork(
+    audioBlob,
+    options = {}
+) {
+    if (
+        !(audioBlob instanceof Blob)
+    ) {
+        throw new TypeError(
+            "sendAudioBlobToNetwork requires an audio Blob."
+        );
+    }
+
+    if (
+        !networkSocket ||
+        networkSocket.readyState !==
+            WebSocket.OPEN
+    ) {
+        throw new Error(
+            "ArNet is not connected."
+        );
+    }
+
+    const bytes =
+        new Uint8Array(
+            await audioBlob.arrayBuffer()
+        );
+
+    const sent =
+        sendNetworkMessage({
+            type:
+                options.directTarget
+                    ? "direct-audio"
+                    : "channel-audio",
+
+            from:
+                getNetworkCallsign(),
+
+            to:
+                options.directTarget ||
+                null,
+
+            frequency:
+                getNetworkFrequency(),
+
+            mode:
+                comboMode.value,
+
+            mimeType:
+                audioBlob.type ||
+                "audio/wav",
+
+            audio:
+                bytesToBase64(
+                    bytes
+                ),
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+
+    if (!sent) {
+        throw new Error(
+            "ArNet is not connected."
+        );
+    }
+}
+
+// ======================================================
+// Incoming network messages
+// ======================================================
+
+async function handleNetworkMessage(
+    event
+) {
+    if (
+        typeof event.data !==
+        "string"
+    ) {
         return;
     }
-    case "channel-ammef":
-    case "direct-ammef":
-    await receiveNetworkAMMEF(message);
-    break;
+
     let message;
 
     try {
         message =
-            JSON.parse(event.data);
+            JSON.parse(
+                event.data
+            );
     }
     catch (error) {
         console.warn(
             "Invalid network message:",
-            event.data
+            event.data,
+            error
         );
 
         return;
     }
 
     switch (message.type) {
+        case "welcome":
+            networkStationId =
+                message.stationId ||
+                networkStationId;
+
+            break;
+
         case "registered":
             networkStationId =
                 message.stationId;
+
+            setNetworkStatus(
+                `Registered as ${message.callsign} ` +
+                `on ${message.frequency} Vt.`,
+                "#00FF7F"
+            );
+
+            break;
+
+        case "tuned":
+            setNetworkStatus(
+                `Tuned to ${message.frequency} Vt.`,
+                "#00FFFF"
+            );
 
             break;
 
@@ -533,7 +516,8 @@ async function handleNetworkMessage(event) {
                 message.count || 0;
 
             setNetworkStatus(
-                `${networkListenerCount} station(s) listening on ${message.frequency} Vt.`,
+                `${networkListenerCount} station(s) ` +
+                `listening on ${message.frequency} Vt.`,
                 "#00FFFF"
             );
 
@@ -541,7 +525,9 @@ async function handleNetworkMessage(event) {
 
         case "busy":
             networkBusy =
-                Boolean(message.busy);
+                Boolean(
+                    message.busy
+                );
 
             break;
 
@@ -553,6 +539,23 @@ async function handleNetworkMessage(event) {
 
             break;
 
+        case "channel-ammef":
+        case "direct-ammef":
+            await receiveNetworkAMMEF(
+                message
+            );
+
+            break;
+
+        case "transmission-result":
+            setNetworkStatus(
+                `Transmission delivered to ` +
+                `${message.recipients || 0} station(s).`,
+                "#00FF7F"
+            );
+
+            break;
+
         case "error":
             setNetworkStatus(
                 `Network error: ${message.message}`,
@@ -560,22 +563,36 @@ async function handleNetworkMessage(event) {
             );
 
             break;
+
+        case "pong":
+            break;
+
+        default:
+            console.warn(
+                "Unknown network message:",
+                message
+            );
     }
 }
 
-async function receiveNetworkAudio(message) {
+// ======================================================
+// Audio reception
+// ======================================================
+
+async function receiveNetworkAudio(
+    message
+) {
     if (!message.audio) {
         return;
     }
 
-    const bytes =
-        base64ToBytes(
-            message.audio
-        );
-
     const blob =
         new Blob(
-            [bytes],
+            [
+                base64ToBytes(
+                    message.audio
+                )
+            ],
             {
                 type:
                     message.mimeType ||
@@ -590,18 +607,23 @@ async function receiveNetworkAudio(message) {
         "#004466";
 
     setNetworkStatus(
-        `Receiving ${message.from || "unknown"} on ${message.frequency} Vt.`,
+        `Receiving ${message.from || "UNKNOWN"} ` +
+        `on ${message.frequency} Vt.`,
         "#00FFFF"
     );
 
     try {
         const decoded =
-            await decodeAudioBlob(blob);
+            await decodeAudioBlob(
+                blob
+            );
 
         lastAudioPcmArray =
             decoded.pcmSamples;
 
-        await playAudioBlob(blob);
+        await playAudioBlob(
+            blob
+        );
     }
     catch (error) {
         console.error(
@@ -610,8 +632,310 @@ async function receiveNetworkAudio(message) {
         );
 
         setNetworkStatus(
-            "Incoming network audio could not be played.",
+            "Incoming audio could not be played.",
             "#FF3333"
         );
     }
 }
+
+// ======================================================
+// AMMEF reception
+// ======================================================
+
+async function receiveNetworkAMMEF(
+    message
+) {
+    if (!message.data) {
+        return;
+    }
+
+    const ammefBlob =
+        new Blob(
+            [
+                base64ToBytes(
+                    message.data
+                )
+            ],
+            {
+                type:
+                    "application/x-ammef"
+            }
+        );
+
+    txtTxState.textContent =
+        "NET";
+
+    boxTxState.style.background =
+        "#004466";
+
+    setNetworkStatus(
+        `Receiving ${message.transmissionKind || "AMMEF"} ` +
+        `from ${message.from || "UNKNOWN"} ` +
+        `on ${message.frequency} Vt.`,
+        "#00FFFF"
+    );
+
+    try {
+        const parsed =
+            await readAMMEFFile(
+                ammefBlob
+            );
+
+        await decodeReceivedAMMEF(
+            parsed,
+            message
+        );
+
+        if (
+            typeof refreshMediaActionButtons ===
+            "function"
+        ) {
+            refreshMediaActionButtons();
+        }
+    }
+    catch (error) {
+        console.error(
+            "Network AMMEF decode failed:",
+            error
+        );
+
+        setNetworkStatus(
+            "Received AMMEF could not be decoded.",
+            "#FF3333"
+        );
+    }
+}
+
+async function decodeReceivedAMMEF(
+    parsed,
+    message
+) {
+    const kind =
+        message.transmissionKind ||
+        "audio";
+
+    if (
+        kind === "photo" &&
+        parsed.originalPhotoBlob
+    ) {
+        if (
+            parsed.photoMonitorAudioBlob
+        ) {
+            const decoded =
+                await decodeAudioBlob(
+                    parsed.photoMonitorAudioBlob
+                );
+
+            lastAudioPcmArray =
+                decoded.pcmSamples;
+
+            await playAudioBlob(
+                parsed.photoMonitorAudioBlob
+            );
+        }
+
+        setNetworkStatus(
+            `Decoded photo from ${message.from}. ` +
+            `Use ORIGINAL PHOTO to view it.`,
+            "#00FF7F"
+        );
+
+        return;
+    }
+
+    if (
+        kind === "video" &&
+        parsed.originalVideoBlob
+    ) {
+        if (
+            parsed.videoMonitorAudioBlob
+        ) {
+            const decoded =
+                await decodeAudioBlob(
+                    parsed.videoMonitorAudioBlob
+                );
+
+            lastAudioPcmArray =
+                decoded.pcmSamples;
+
+            await playAudioBlob(
+                parsed.videoMonitorAudioBlob
+            );
+        }
+
+        setNetworkStatus(
+            `Decoded video from ${message.from}. ` +
+            `Use ORIGINAL VIDEO to view it.`,
+            "#00FF7F"
+        );
+
+        return;
+    }
+
+    const audioTrack =
+        parsed.cleanAudioBlob ||
+        parsed.monitorAudioBlob ||
+        parsed.telemetryAudioBlob ||
+        parsed.photoMonitorAudioBlob ||
+        parsed.videoMonitorAudioBlob;
+
+    if (!audioTrack) {
+        throw new Error(
+            "The transmission contains no usable payload."
+        );
+    }
+
+    const decoded =
+        await decodeAudioBlob(
+            audioTrack
+        );
+
+    lastAudioPcmArray =
+        decoded.pcmSamples;
+
+    await playAudioBlob(
+        audioTrack
+    );
+
+    setNetworkStatus(
+        `Decoded ${kind} transmission ` +
+        `from ${message.from}.`,
+        "#00FF7F"
+    );
+}
+
+// ======================================================
+// Imported audio encoder
+// ======================================================
+
+async function encodeAudioBlobForTransmission(
+    inputBlob
+) {
+    if (
+        !(inputBlob instanceof Blob)
+    ) {
+        throw new TypeError(
+            "An audio Blob is required."
+        );
+    }
+
+    initAudioContext();
+
+    if (
+        audioCtx.state ===
+        "suspended"
+    ) {
+        await audioCtx.resume();
+    }
+
+    const sourceBuffer =
+        await inputBlob.arrayBuffer();
+
+    const decoded =
+        await audioCtx.decodeAudioData(
+            sourceBuffer.slice(0)
+        );
+
+    const rawChannel =
+        decoded.getChannelData(0);
+
+    const cleanPcm =
+        floatChannelToPcm16(
+            rawChannel
+        );
+
+    const monitorPcm =
+        encodeVoiceToFmMonitor(
+            rawChannel
+        );
+
+    lastCleanAudioBlob =
+        createWavBuffer(
+            cleanPcm,
+            decoded.sampleRate
+        );
+
+    lastModulatedAudioBlob =
+        createWavBuffer(
+            monitorPcm,
+            ARNET_SAMPLE_RATE
+        );
+
+    lastProcessedAudioBlob =
+        lastCleanAudioBlob;
+
+    lastAudioPcmArray =
+        monitorPcm;
+
+    return {
+        cleanBlob:
+            lastCleanAudioBlob,
+
+        monitorBlob:
+            lastModulatedAudioBlob,
+
+        duration:
+            decoded.duration,
+
+        sampleRate:
+            decoded.sampleRate
+    };
+}
+
+// ======================================================
+// Networking event listeners
+// ======================================================
+
+function initializeNetworkControls() {
+    txtCallsign.addEventListener(
+        "change",
+        updateNetworkRegistration
+    );
+
+    txtCallsign.addEventListener(
+        "blur",
+        updateNetworkRegistration
+    );
+
+    txtCallsign.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key ===
+                "Enter"
+            ) {
+                event.preventDefault();
+                txtCallsign.blur();
+            }
+        }
+    );
+
+    txtFrequency.addEventListener(
+        "change",
+        () => {
+            tuneNetworkFrequency(
+                txtFrequency.value
+            );
+        }
+    );
+
+    txtFrequency.addEventListener(
+        "keydown",
+        event => {
+            if (
+                event.key ===
+                "Enter"
+            ) {
+                event.preventDefault();
+
+                txtFrequency.blur();
+
+                tuneNetworkFrequency(
+                    txtFrequency.value
+                );
+            }
+        }
+    );
+}
+
+initializeNetworkControls();
