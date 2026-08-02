@@ -308,8 +308,10 @@ async function sendCurrentAMMEFToNetwork(
         );
     }
 
-    const ammefBlob =
-        await createAMMEFBlob();
+  const ammefBlob =
+    await createAMMEFBlob({
+        transmissionKind
+    });
 
     const bytes =
         new Uint8Array(
