@@ -1290,6 +1290,284 @@ async function encodeAudioBlobForTransmission(
 }
 
 // ======================================================
+// Existing AMMEF file transmission
+// ======================================================
+
+/**
+ * Sends an existing AMMEF file without rebuilding it.
+ *
+ * @param {File|Blob} file
+ */
+async function transmitExistingAMMEFFile(
+    file
+) {
+    if (
+        !(file instanceof Blob)
+    ) {
+        throw new TypeError(
+            "An AMMEF file is required."
+        );
+    }
+
+    if (
+        !networkConnected ||
+        !networkSocket ||
+        networkSocket.readyState !==
+            WebSocket.OPEN
+    ) {
+        throw new Error(
+            "ArNet is not connected."
+        );
+    }
+
+    txtTxState.textContent =
+        "TX-FILE";
+
+    boxTxState.style.background =
+        "#884400";
+
+    setNetworkStatus(
+        "Reading AMMEF transmission file...",
+        "#FFD700"
+    );
+
+    /*
+     * Validate the AMMEF and read its metadata.
+     * This does not play or decode the audio.
+     */
+    const parsed =
+        await readAMMEFFile(
+            file
+        );
+
+    const metadata =
+        parsed.metadata ||
+        {};
+
+    const bytes =
+        new Uint8Array(
+            await file.arrayBuffer()
+        );
+
+    if (
+        bytes.length === 0
+    ) {
+        throw new Error(
+            "The selected AMMEF file is empty."
+        );
+    }
+
+    const transmissionKind =
+        String(
+            metadata.transmissionKind ||
+            "audio"
+        )
+            .trim()
+            .toLowerCase();
+
+    const direct =
+        networkTargetMode ===
+            "direct" &&
+        Boolean(
+            networkDirectTarget
+        );
+
+    const durationMs =
+        await getImportedAMMEFDurationMs(
+            parsed
+        );
+
+    const sent =
+        sendNetworkMessage({
+            type:
+                direct
+                    ? "direct-ammef"
+                    : "channel-ammef",
+
+            from:
+                getNetworkCallsign(),
+
+            to:
+                direct
+                    ? networkDirectTarget
+                    : null,
+
+            /*
+             * Route it on the frequency currently selected
+             * by the transmitting operator.
+             */
+            frequency:
+                getNetworkFrequency(),
+
+            mode:
+                comboMode.value,
+
+            band:
+                comboBand.value,
+
+            bandwidth:
+                comboBandwidth.value,
+
+            transmissionKind,
+
+            morseText:
+                typeof metadata.morseText ===
+                    "string"
+                    ? metadata.morseText
+                    : null,
+
+            durationMs,
+
+            mimeType:
+                "application/x-ammef",
+
+            fileName:
+                file.name ||
+                "transmission.ammef",
+
+            data:
+                bytesToBase64(
+                    bytes
+                ),
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+
+    if (!sent) {
+        throw new Error(
+            "The relay connection closed before the AMMEF file was sent."
+        );
+    }
+
+    setNetworkStatus(
+        direct
+            ? (
+                `AMMEF file sent to ` +
+                `${networkDirectTarget}.`
+            )
+            : (
+                `AMMEF file transmitted on ` +
+                `${getNetworkFrequency()} Vt.`
+            ),
+        "#00FF7F"
+    );
+
+    setTimeout(
+        returnToReceiveMode,
+        1000
+    );
+}
+
+/**
+ * Determines the approximate duration of an imported
+ * AMMEF transmission for late-join replay.
+ *
+ * @param {object} parsed
+ * @returns {Promise<number>}
+ */
+async function getImportedAMMEFDurationMs(
+    parsed
+) {
+    const possibleAudioTracks = [
+        parsed.cleanAudioBlob,
+        parsed.monitorAudioBlob,
+        parsed.fmMonitorAudioBlob,
+        parsed.telemetryAudioBlob,
+        parsed.photoMonitorAudioBlob,
+        parsed.videoMonitorAudioBlob
+    ];
+
+    for (
+        const track of
+        possibleAudioTracks
+    ) {
+        if (
+            track instanceof Blob
+        ) {
+            try {
+                const duration =
+                    await getAudioBlobDurationMs(
+                        track
+                    );
+
+                if (duration > 0) {
+                    return duration;
+                }
+            }
+            catch (error) {
+                console.warn(
+                    "Could not read AMMEF track duration:",
+                    error
+                );
+            }
+        }
+    }
+
+    return 30000;
+}
+
+/**
+ * Opens the AMMEF file selector.
+ */
+function selectAMMEFForTransmission() {
+    if (
+        !networkConnected
+    ) {
+        setNetworkStatus(
+            "Connect to the ArNet relay before transmitting an AMMEF file.",
+            "#FF3333"
+        );
+
+        return;
+    }
+
+    fileTransmitAMMEF.value =
+        "";
+
+    fileTransmitAMMEF.click();
+}
+
+/**
+ * Handles a selected AMMEF file.
+ *
+ * @param {Event} event
+ */
+async function handleAMMEFTransmitSelection(
+    event
+) {
+    const file =
+        event.target.files?.[0];
+
+    if (!file) {
+        return;
+    }
+
+    try {
+        await transmitExistingAMMEFFile(
+            file
+        );
+    }
+    catch (error) {
+        console.error(
+            "AMMEF file transmission failed:",
+            error
+        );
+
+        setNetworkStatus(
+            `AMMEF transmission failed: ${
+                error.message ||
+                "Unknown error"
+            }`,
+            "#FF3333"
+        );
+
+        returnToReceiveMode();
+    }
+}
+
+// ======================================================
 // Network control listeners
 // ======================================================
 
