@@ -1,6 +1,7 @@
 // ======================================================
 // ArNet Transceiver
 // AMMEF Stream v2
+// Audio Preparation and Chunking
 // ======================================================
 
 const ARNET_STREAM_SAMPLE_RATE =
@@ -12,8 +13,39 @@ const ARNET_STREAM_CHANNELS =
 const ARNET_STREAM_CHUNK_MS =
     200;
 
+// ======================================================
+// Stream state
+// ======================================================
+
+let selectedStreamAudioBlob =
+    null;
+
+let lastPreparedArNetStream =
+    null;
+
+let isPreparingArNetStream =
+    false;
+
+// ======================================================
+// Dashboard controls
+// ======================================================
+
+const fileStreamAudio =
+    document.getElementById(
+        "fileStreamAudio"
+    );
+
+const btnPrepareStream =
+    document.getElementById(
+        "btnPrepareStream"
+    );
+
+// ======================================================
+// Stream ID generation
+// ======================================================
+
 /**
- * Creates a simple unique stream ID.
+ * Creates a unique ID for an ArNet audio stream.
  *
  * @returns {string}
  */
@@ -27,7 +59,8 @@ function createArNetStreamId() {
     }
 
     return (
-        Date.now().toString(36) +
+        Date.now()
+            .toString(36) +
         "-" +
         Math.random()
             .toString(36)
@@ -35,8 +68,12 @@ function createArNetStreamId() {
     );
 }
 
+// ======================================================
+// Audio decoding and conversion
+// ======================================================
+
 /**
- * Decodes an audio file and converts it to mono PCM16
+ * Decodes an audio file and converts it into mono PCM16
  * at the ArNet stream sample rate.
  *
  * @param {Blob} audioBlob
@@ -53,10 +90,24 @@ async function decodeAudioForArNetStream(
         );
     }
 
+    if (
+        typeof initAudioContext !==
+            "function"
+    ) {
+        throw new Error(
+            "The ArNet audio engine is not available."
+        );
+    }
+
     initAudioContext();
 
+    if (!audioCtx) {
+        throw new Error(
+            "The browser could not create an audio context."
+        );
+    }
+
     if (
-        audioCtx &&
         audioCtx.state ===
             "suspended"
     ) {
@@ -66,10 +117,24 @@ async function decodeAudioForArNetStream(
     const sourceBuffer =
         await audioBlob.arrayBuffer();
 
-    const decodedAudio =
-        await audioCtx.decodeAudioData(
-            sourceBuffer.slice(0)
+    let decodedAudio;
+
+    try {
+        decodedAudio =
+            await audioCtx.decodeAudioData(
+                sourceBuffer.slice(0)
+            );
+    }
+    catch (error) {
+        console.error(
+            "Audio decoding failed:",
+            error
         );
+
+        throw new Error(
+            "The selected audio file could not be decoded."
+        );
+    }
 
     if (
         decodedAudio.numberOfChannels <
@@ -80,21 +145,30 @@ async function decodeAudioForArNetStream(
         );
     }
 
-    const sourceChannel =
-        decodedAudio.getChannelData(
-            0
+    const monoChannel =
+        mixAudioBufferToMono(
+            decodedAudio
         );
 
     const resampledChannel =
         resampleFloat32Audio(
-            sourceChannel,
+            monoChannel,
             decodedAudio.sampleRate,
             ARNET_STREAM_SAMPLE_RATE
         );
 
     const pcm16 =
-        floatChannelToPcm16(
+        convertFloat32ToPcm16(
             resampledChannel
+        );
+
+    const durationMs =
+        Math.round(
+            (
+                pcm16.length /
+                ARNET_STREAM_SAMPLE_RATE
+            ) *
+            1000
         );
 
     return {
@@ -106,15 +180,59 @@ async function decodeAudioForArNetStream(
         channels:
             ARNET_STREAM_CHANNELS,
 
-        durationMs:
-            Math.round(
-                (
-                    pcm16.length /
-                    ARNET_STREAM_SAMPLE_RATE
-                ) *
-                1000
-            )
+        durationMs,
+
+        sourceSampleRate:
+            decodedAudio.sampleRate,
+
+        sourceChannels:
+            decodedAudio.numberOfChannels
     };
+}
+
+/**
+ * Mixes all channels in an AudioBuffer into one mono
+ * Float32Array.
+ *
+ * @param {AudioBuffer} audioBuffer
+ * @returns {Float32Array}
+ */
+function mixAudioBufferToMono(
+    audioBuffer
+) {
+    const frameCount =
+        audioBuffer.length;
+
+    const channelCount =
+        audioBuffer.numberOfChannels;
+
+    const mono =
+        new Float32Array(
+            frameCount
+        );
+
+    for (
+        let channelIndex = 0;
+        channelIndex < channelCount;
+        channelIndex++
+    ) {
+        const channel =
+            audioBuffer.getChannelData(
+                channelIndex
+            );
+
+        for (
+            let sampleIndex = 0;
+            sampleIndex < frameCount;
+            sampleIndex++
+        ) {
+            mono[sampleIndex] +=
+                channel[sampleIndex] /
+                channelCount;
+        }
+    }
+
+    return mono;
 }
 
 /**
@@ -131,6 +249,25 @@ function resampleFloat32Audio(
     sourceRate,
     targetRate
 ) {
+    if (
+        !(input instanceof Float32Array)
+    ) {
+        throw new TypeError(
+            "Float32 audio is required for resampling."
+        );
+    }
+
+    if (
+        !Number.isFinite(sourceRate) ||
+        sourceRate <= 0 ||
+        !Number.isFinite(targetRate) ||
+        targetRate <= 0
+    ) {
+        throw new RangeError(
+            "Valid source and target sample rates are required."
+        );
+    }
+
     if (
         sourceRate === targetRate
     ) {
@@ -181,18 +318,81 @@ function resampleFloat32Audio(
             sourcePosition -
             lowerIndex;
 
+        const lowerSample =
+            input[
+                Math.min(
+                    lowerIndex,
+                    input.length - 1
+                )
+            ] || 0;
+
+        const upperSample =
+            input[
+                upperIndex
+            ] || 0;
+
         output[outputIndex] =
-            input[lowerIndex] *
+            lowerSample *
                 (
                     1 -
                     fraction
                 ) +
-            input[upperIndex] *
+            upperSample *
                 fraction;
     }
 
     return output;
 }
+
+/**
+ * Converts Float32 audio samples into signed PCM16.
+ *
+ * This function is local to stream.js so it still works
+ * even if the encoder helper has not loaded yet.
+ *
+ * @param {Float32Array} input
+ * @returns {Int16Array}
+ */
+function convertFloat32ToPcm16(
+    input
+) {
+    const output =
+        new Int16Array(
+            input.length
+        );
+
+    for (
+        let index = 0;
+        index < input.length;
+        index++
+    ) {
+        const sample =
+            Math.max(
+                -1,
+                Math.min(
+                    1,
+                    input[index]
+                )
+            );
+
+        output[index] =
+            sample < 0
+                ? Math.round(
+                    sample *
+                    0x8000
+                )
+                : Math.round(
+                    sample *
+                    0x7FFF
+                );
+    }
+
+    return output;
+}
+
+// ======================================================
+// PCM chunk creation
+// ======================================================
 
 /**
  * Divides PCM16 data into timed stream chunks.
@@ -261,26 +461,37 @@ function createPcmStreamChunks(
                 end
             );
 
+        const timestampMs =
+            Math.round(
+                (
+                    offset /
+                    sampleRate
+                ) *
+                1000
+            );
+
+        const actualDurationMs =
+            Math.round(
+                (
+                    samples.length /
+                    sampleRate
+                ) *
+                1000
+            );
+
         chunks.push({
             sequence,
 
-            timestampMs:
-                Math.round(
-                    (
-                        offset /
-                        sampleRate
-                    ) *
-                    1000
-                ),
+            timestampMs,
 
             durationMs:
-                Math.round(
-                    (
-                        samples.length /
-                        sampleRate
-                    ) *
-                    1000
-                ),
+                actualDurationMs,
+
+            sampleOffset:
+                offset,
+
+            sampleCount:
+                samples.length,
 
             samples
         });
@@ -291,8 +502,12 @@ function createPcmStreamChunks(
     return chunks;
 }
 
+// ======================================================
+// PCM byte conversion
+// ======================================================
+
 /**
- * Converts PCM16 samples into byte data.
+ * Converts signed PCM16 samples into little-endian bytes.
  *
  * @param {Int16Array} samples
  * @returns {Uint8Array}
@@ -300,6 +515,14 @@ function createPcmStreamChunks(
 function pcm16ToBytes(
     samples
 ) {
+    if (
+        !(samples instanceof Int16Array)
+    ) {
+        throw new TypeError(
+            "PCM16 samples are required."
+        );
+    }
+
     const bytes =
         new Uint8Array(
             samples.length *
@@ -327,7 +550,7 @@ function pcm16ToBytes(
 }
 
 /**
- * Converts byte data back into PCM16 samples.
+ * Converts little-endian bytes back into PCM16 samples.
  *
  * @param {Uint8Array} bytes
  * @returns {Int16Array}
@@ -335,11 +558,24 @@ function pcm16ToBytes(
 function bytesToPcm16(
     bytes
 ) {
-    const sampleCount =
-        Math.floor(
-            bytes.byteLength /
+    if (
+        !(bytes instanceof Uint8Array)
+    ) {
+        throw new TypeError(
+            "A Uint8Array is required."
+        );
+    }
+
+    const usableByteLength =
+        bytes.byteLength -
+        (
+            bytes.byteLength %
             2
         );
+
+    const sampleCount =
+        usableByteLength /
+        2;
 
     const samples =
         new Int16Array(
@@ -350,7 +586,7 @@ function bytesToPcm16(
         new DataView(
             bytes.buffer,
             bytes.byteOffset,
-            bytes.byteLength
+            usableByteLength
         );
 
     for (
@@ -368,15 +604,35 @@ function bytesToPcm16(
     return samples;
 }
 
+// ======================================================
+// Stream preparation
+// ======================================================
+
 /**
- * Prepares an audio Blob for streaming.
+ * Prepares an audio Blob for ArNet streaming.
  *
  * @param {Blob} audioBlob
+ * @param {object} options
  * @returns {Promise<object>}
  */
 async function prepareArNetAudioStream(
-    audioBlob
+    audioBlob,
+    options = {}
 ) {
+    if (
+        !(audioBlob instanceof Blob)
+    ) {
+        throw new TypeError(
+            "prepareArNetAudioStream requires an audio Blob or File."
+        );
+    }
+
+    const chunkDurationMs =
+        Number(
+            options.chunkDurationMs
+        ) ||
+        ARNET_STREAM_CHUNK_MS;
+
     const decoded =
         await decodeAudioForArNetStream(
             audioBlob
@@ -389,14 +645,29 @@ async function prepareArNetAudioStream(
                 sampleRate:
                     decoded.sampleRate,
 
-                chunkDurationMs:
-                    ARNET_STREAM_CHUNK_MS
+                chunkDurationMs
             }
         );
+
+    const fileName =
+        typeof audioBlob.name ===
+            "string"
+            ? audioBlob.name
+            : "audio-stream";
+
+    const mimeType =
+        audioBlob.type ||
+        "application/octet-stream";
 
     return {
         streamId:
             createArNetStreamId(),
+
+        version:
+            2,
+
+        transmissionKind:
+            "audio-stream",
 
         codec:
             "pcm16",
@@ -410,12 +681,296 @@ async function prepareArNetAudioStream(
         durationMs:
             decoded.durationMs,
 
-        chunkDurationMs:
-            ARNET_STREAM_CHUNK_MS,
+        chunkDurationMs,
 
         totalChunks:
             chunks.length,
 
+        totalSamples:
+            decoded.pcm16.length,
+
+        fileName,
+
+        mimeType,
+
+        created:
+            new Date()
+                .toISOString(),
+
         chunks
     };
 }
+
+// ======================================================
+// Selected file preparation
+// ======================================================
+
+/**
+ * Opens the audio-file selector.
+ */
+function selectAudioForArNetStream() {
+    if (!fileStreamAudio) {
+        setArNetStreamStatus(
+            "ERROR: The stream audio file selector is missing.",
+            "#FF3333"
+        );
+
+        return;
+    }
+
+    if (isPreparingArNetStream) {
+        return;
+    }
+
+    fileStreamAudio.value =
+        "";
+
+    fileStreamAudio.click();
+}
+
+/**
+ * Handles a file selected by the operator.
+ *
+ * @param {Event} event
+ */
+async function handleArNetStreamFileSelection(
+    event
+) {
+    const file =
+        event.target.files?.[0];
+
+    if (!file) {
+        return;
+    }
+
+    selectedStreamAudioBlob =
+        file;
+
+    isPreparingArNetStream =
+        true;
+
+    updatePrepareStreamButton();
+
+    setArNetStreamStatus(
+        `Preparing ${file.name} for streaming...`,
+        "#FFD700"
+    );
+
+    try {
+        const prepared =
+            await prepareArNetAudioStream(
+                selectedStreamAudioBlob
+            );
+
+        lastPreparedArNetStream =
+            prepared;
+
+        /*
+         * This makes the prepared stream easy to inspect
+         * from the browser console.
+         */
+        globalThis.lastPreparedArNetStream =
+            prepared;
+
+        globalThis.selectedStreamAudioBlob =
+            selectedStreamAudioBlob;
+
+        console.log(
+            "Prepared ArNet stream:",
+            prepared
+        );
+
+        const durationSeconds =
+            Math.round(
+                prepared.durationMs /
+                1000
+            );
+
+        setArNetStreamStatus(
+            `Stream prepared: ${prepared.totalChunks} chunks, ` +
+            `${durationSeconds} seconds.`,
+            "#00FF7F"
+        );
+    }
+    catch (error) {
+        console.error(
+            "Stream preparation failed:",
+            error
+        );
+
+        selectedStreamAudioBlob =
+            null;
+
+        lastPreparedArNetStream =
+            null;
+
+        globalThis.lastPreparedArNetStream =
+            null;
+
+        globalThis.selectedStreamAudioBlob =
+            null;
+
+        setArNetStreamStatus(
+            `ERROR: ${
+                error.message ||
+                "Could not prepare the audio stream."
+            }`,
+            "#FF3333"
+        );
+    }
+    finally {
+        isPreparingArNetStream =
+            false;
+
+        updatePrepareStreamButton();
+    }
+}
+
+// ======================================================
+// Stream UI helpers
+// ======================================================
+
+/**
+ * Updates the stream preparation button.
+ */
+function updatePrepareStreamButton() {
+    if (!btnPrepareStream) {
+        return;
+    }
+
+    btnPrepareStream.disabled =
+        isPreparingArNetStream;
+
+    btnPrepareStream.textContent =
+        isPreparingArNetStream
+            ? "PREPARING..."
+            : "PREPARE AUDIO STREAM";
+
+    btnPrepareStream.style.opacity =
+        isPreparingArNetStream
+            ? "0.6"
+            : "1";
+
+    btnPrepareStream.style.cursor =
+        isPreparingArNetStream
+            ? "wait"
+            : "pointer";
+}
+
+/**
+ * Displays a stream-related status message.
+ *
+ * @param {string} message
+ * @param {string} color
+ */
+function setArNetStreamStatus(
+    message,
+    color
+) {
+    if (
+        typeof setStatus ===
+            "function"
+    ) {
+        setStatus(
+            message,
+            color
+        );
+
+        return;
+    }
+
+    if (
+        typeof txtStatus !==
+            "undefined" &&
+        txtStatus
+    ) {
+        txtStatus.textContent =
+            message.startsWith("STATUS:") ||
+            message.startsWith("ERROR:")
+                ? message
+                : `STATUS: ${message}`;
+
+        txtStatus.style.color =
+            color;
+    }
+}
+
+// ======================================================
+// Public stream-state helpers
+// ======================================================
+
+/**
+ * Returns the currently selected audio Blob.
+ *
+ * @returns {Blob|null}
+ */
+function getSelectedStreamAudioBlob() {
+    return selectedStreamAudioBlob;
+}
+
+/**
+ * Returns the most recently prepared stream.
+ *
+ * @returns {object|null}
+ */
+function getLastPreparedArNetStream() {
+    return lastPreparedArNetStream;
+}
+
+/**
+ * Clears the selected and prepared stream.
+ */
+function clearPreparedArNetStream() {
+    selectedStreamAudioBlob =
+        null;
+
+    lastPreparedArNetStream =
+        null;
+
+    globalThis.selectedStreamAudioBlob =
+        null;
+
+    globalThis.lastPreparedArNetStream =
+        null;
+
+    if (fileStreamAudio) {
+        fileStreamAudio.value =
+            "";
+    }
+
+    setArNetStreamStatus(
+        "Prepared stream cleared.",
+        "#AAAAAA"
+    );
+}
+
+// ======================================================
+// Event listeners
+// ======================================================
+
+function initializeArNetStreamControls() {
+    if (
+        btnPrepareStream &&
+        fileStreamAudio
+    ) {
+        btnPrepareStream.addEventListener(
+            "click",
+            selectAudioForArNetStream
+        );
+
+        fileStreamAudio.addEventListener(
+            "change",
+            handleArNetStreamFileSelection
+        );
+    }
+    else {
+        console.warn(
+            "ArNet stream controls were not found. " +
+            "Add #btnPrepareStream and #fileStreamAudio to index.html."
+        );
+    }
+
+    updatePrepareStreamButton();
+}
+
+initializeArNetStreamControls();
