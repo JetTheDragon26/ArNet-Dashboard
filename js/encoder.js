@@ -988,8 +988,12 @@ async function handleIdent() {
                 "#FFD700";
 
             await sendCurrentAMMEFToNetwork(
-                "ident"
-            );
+    "ident",
+    {
+        morseText:
+            callsign
+    }
+);
         }
 
         txtStatus.textContent =
