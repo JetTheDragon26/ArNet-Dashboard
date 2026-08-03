@@ -1599,3 +1599,17 @@ function initializeNetworkControls() {
 }
 
 initializeNetworkControls();
+if (
+    btnTransmitAMMEF &&
+    fileTransmitAMMEF
+) {
+    btnTransmitAMMEF.addEventListener(
+        "click",
+        selectAMMEFForTransmission
+    );
+
+    fileTransmitAMMEF.addEventListener(
+        "change",
+        handleAMMEFTransmitSelection
+    );
+}
