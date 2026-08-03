@@ -591,20 +591,24 @@ async function createAMMEFBlob(
         );
 
     /*
-     * Morse IDENT currently has no separate clean track.
-     * Its encoded waveform may be stored in
-     * lastProcessedAudioBlob.
-     */
-    if (
+ * Morse and IDENT have no separate clean track.
+ * Their encoded waveform may be stored in
+ * lastProcessedAudioBlob.
+ */
+if (
+    (
         requestedKind ===
-            "ident" &&
-        !monitorBlob
-    ) {
-        monitorBlob =
-            firstValidBlob(
-                lastProcessedAudioBlob
-            );
-    }
+            "ident" ||
+        requestedKind ===
+            "morse"
+    ) &&
+    !monitorBlob
+) {
+    monitorBlob =
+        firstValidBlob(
+            lastProcessedAudioBlob
+        );
+}
 
     /*
      * Avoid treating a visual monitor waveform as clean
