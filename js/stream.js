@@ -25,6 +25,14 @@ let lastPreparedArNetStream =
 
 let isPreparingArNetStream =
     false;
+let isTransmittingArNetStream =
+    false;
+
+let stopArNetStreamRequested =
+    false;
+
+let activeOutgoingStreamId =
+    null;
 
 // ======================================================
 // Dashboard controls
@@ -38,6 +46,16 @@ const fileStreamAudio =
 const btnPrepareStream =
     document.getElementById(
         "btnPrepareStream"
+    );
+
+const btnStartStream =
+    document.getElementById(
+        "btnStartStream"
+    );
+
+const btnStopStream =
+    document.getElementById(
+        "btnStopStream"
     );
 
 // ======================================================
@@ -549,6 +567,37 @@ function pcm16ToBytes(
     return bytes;
 }
 
+function streamBytesToBase64(
+    bytes
+) {
+    let binary =
+        "";
+
+    const chunkSize =
+        0x8000;
+
+    for (
+        let offset = 0;
+        offset < bytes.length;
+        offset += chunkSize
+    ) {
+        const chunk =
+            bytes.subarray(
+                offset,
+                offset + chunkSize
+            );
+
+        binary +=
+            String.fromCharCode(
+                ...chunk
+            );
+    }
+
+    return btoa(
+        binary
+    );
+}
+
 /**
  * Converts little-endian bytes back into PCM16 samples.
  *
@@ -764,6 +813,7 @@ async function handleArNetStreamFileSelection(
 
         lastPreparedArNetStream =
             prepared;
+        updateStreamTransmitButtons();
 
         /*
          * This makes the prepared stream easy to inspect
@@ -810,6 +860,7 @@ async function handleArNetStreamFileSelection(
         globalThis.selectedStreamAudioBlob =
             null;
 
+        updateStreamTransmitButtons();
         setArNetStreamStatus(
             `ERROR: ${
                 error.message ||
@@ -823,6 +874,7 @@ async function handleArNetStreamFileSelection(
             false;
 
         updatePrepareStreamButton();
+        updateStreamTransmitButtons();
     }
 }
 
@@ -945,6 +997,369 @@ function clearPreparedArNetStream() {
 }
 
 // ======================================================
+// Network stream transmission
+// ======================================================
+
+function waitForStreamInterval(
+    milliseconds
+) {
+    return new Promise(
+        resolve => {
+            setTimeout(
+                resolve,
+                milliseconds
+            );
+        }
+    );
+}
+
+async function transmitPreparedArNetStream() {
+    if (
+        isTransmittingArNetStream
+    ) {
+        return;
+    }
+
+    if (
+        !lastPreparedArNetStream
+    ) {
+        setArNetStreamStatus(
+            "ERROR: Prepare an audio stream first.",
+            "#FF3333"
+        );
+
+        return;
+    }
+
+    if (
+        typeof sendNetworkMessage !==
+            "function" ||
+        !networkConnected ||
+        !networkSocket ||
+        networkSocket.readyState !==
+            WebSocket.OPEN
+    ) {
+        setArNetStreamStatus(
+            "ERROR: Connect to the ArNet relay first.",
+            "#FF3333"
+        );
+
+        return;
+    }
+
+    const stream =
+        lastPreparedArNetStream;
+
+    isTransmittingArNetStream =
+        true;
+
+    stopArNetStreamRequested =
+        false;
+
+    activeOutgoingStreamId =
+        stream.streamId;
+
+    updateStreamTransmitButtons();
+
+    txtTxState.textContent =
+        "STREAM";
+
+    boxTxState.style.background =
+        "#884400";
+
+    const startSent =
+        sendNetworkMessage({
+            type:
+                "ammef-stream-start",
+
+            streamId:
+                stream.streamId,
+
+            from:
+                typeof getNetworkCallsign ===
+                    "function"
+                    ? getNetworkCallsign()
+                    : txtCallsign.value,
+
+            frequency:
+                typeof getNetworkFrequency ===
+                    "function"
+                    ? getNetworkFrequency()
+                    : Number(
+                        txtFrequency.value
+                    ),
+
+            mode:
+                comboMode.value,
+
+            band:
+                comboBand.value,
+
+            bandwidth:
+                comboBandwidth.value,
+
+            codec:
+                stream.codec,
+
+            sampleRate:
+                stream.sampleRate,
+
+            channels:
+                stream.channels,
+
+            chunkDurationMs:
+                stream.chunkDurationMs,
+
+            durationMs:
+                stream.durationMs,
+
+            totalChunks:
+                stream.totalChunks,
+
+            fileName:
+                stream.fileName,
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+
+    if (!startSent) {
+        isTransmittingArNetStream =
+            false;
+
+        activeOutgoingStreamId =
+            null;
+
+        updateStreamTransmitButtons();
+
+        setArNetStreamStatus(
+            "ERROR: Could not begin the stream.",
+            "#FF3333"
+        );
+
+        return;
+    }
+
+    const transmissionStartedAt =
+        performance.now();
+
+    try {
+        for (
+            const chunk of
+            stream.chunks
+        ) {
+            if (
+                stopArNetStreamRequested
+            ) {
+                break;
+            }
+
+            const targetTime =
+                transmissionStartedAt +
+                chunk.timestampMs;
+
+            const delay =
+                targetTime -
+                performance.now();
+
+            if (
+                delay > 0
+            ) {
+                await waitForStreamInterval(
+                    delay
+                );
+            }
+
+            const bytes =
+                pcm16ToBytes(
+                    chunk.samples
+                );
+
+            const sent =
+                sendNetworkMessage({
+                    type:
+                        "ammef-stream-chunk",
+
+                    streamId:
+                        stream.streamId,
+
+                    frequency:
+                        typeof getNetworkFrequency ===
+                            "function"
+                            ? getNetworkFrequency()
+                            : Number(
+                                txtFrequency.value
+                            ),
+
+                    mode:
+                        comboMode.value,
+
+                    band:
+                        comboBand.value,
+
+                    bandwidth:
+                        comboBandwidth.value,
+
+                    sequence:
+                        chunk.sequence,
+
+                    timestampMs:
+                        chunk.timestampMs,
+
+                    durationMs:
+                        chunk.durationMs,
+
+                    sampleCount:
+                        chunk.sampleCount,
+
+                    data:
+                        streamBytesToBase64(
+                            bytes
+                        )
+                });
+
+            if (!sent) {
+                throw new Error(
+                    "The relay connection closed during streaming."
+                );
+            }
+
+            setArNetStreamStatus(
+                `Streaming chunk ${
+                    chunk.sequence + 1
+                } of ${stream.totalChunks}...`,
+                "#FFD700"
+            );
+        }
+
+        sendNetworkMessage({
+            type:
+                "ammef-stream-end",
+
+            streamId:
+                stream.streamId,
+
+            frequency:
+                typeof getNetworkFrequency ===
+                    "function"
+                    ? getNetworkFrequency()
+                    : Number(
+                        txtFrequency.value
+                    ),
+
+            finalSequence:
+                stream.totalChunks -
+                1,
+
+            reason:
+                stopArNetStreamRequested
+                    ? "stopped"
+                    : "complete",
+
+            timestamp:
+                new Date()
+                    .toISOString()
+        });
+
+        setArNetStreamStatus(
+            stopArNetStreamRequested
+                ? "Audio stream stopped."
+                : "Audio stream completed.",
+            stopArNetStreamRequested
+                ? "#FFAA00"
+                : "#00FF7F"
+        );
+    }
+    catch (error) {
+        console.error(
+            "ArNet stream transmission failed:",
+            error
+        );
+
+        sendNetworkMessage({
+            type:
+                "ammef-stream-end",
+
+            streamId:
+                stream.streamId,
+
+            frequency:
+                typeof getNetworkFrequency ===
+                    "function"
+                    ? getNetworkFrequency()
+                    : Number(
+                        txtFrequency.value
+                    ),
+
+            reason:
+                "error"
+        });
+
+        setArNetStreamStatus(
+            `ERROR: ${
+                error.message ||
+                "Stream transmission failed."
+            }`,
+            "#FF3333"
+        );
+    }
+    finally {
+        isTransmittingArNetStream =
+            false;
+
+        stopArNetStreamRequested =
+            false;
+
+        activeOutgoingStreamId =
+            null;
+
+        updateStreamTransmitButtons();
+
+        if (
+            typeof returnToReceiveMode ===
+                "function"
+        ) {
+            returnToReceiveMode();
+        }
+    }
+}
+
+function stopOutgoingArNetStream() {
+    if (
+        !isTransmittingArNetStream
+    ) {
+        return;
+    }
+
+    stopArNetStreamRequested =
+        true;
+
+    setArNetStreamStatus(
+        "Stopping audio stream...",
+        "#FFAA00"
+    );
+}
+
+function updateStreamTransmitButtons() {
+    if (btnStartStream) {
+        btnStartStream.disabled =
+            isTransmittingArNetStream ||
+            !lastPreparedArNetStream;
+
+        btnStartStream.textContent =
+            isTransmittingArNetStream
+                ? "STREAMING..."
+                : "TX STREAM";
+    }
+
+    if (btnStopStream) {
+        btnStopStream.disabled =
+            !isTransmittingArNetStream;
+    }
+}
+
+// ======================================================
 // Event listeners
 // ======================================================
 
@@ -974,3 +1389,18 @@ function initializeArNetStreamControls() {
 }
 
 initializeArNetStreamControls();
+if (btnStartStream) {
+    btnStartStream.addEventListener(
+        "click",
+        transmitPreparedArNetStream
+    );
+}
+
+if (btnStopStream) {
+    btnStopStream.addEventListener(
+        "click",
+        stopOutgoingArNetStream
+    );
+}
+
+updateStreamTransmitButtons();
