@@ -135,6 +135,12 @@ const btnLoad =
 const btnLoadAMMEF =
     document.getElementById("btnLoadAMMEF");
 
+const btnTransmitAMMEF =
+    document.getElementById("btnTransmitAMMEF");
+
+const fileTransmitAMMEF =
+    document.getElementById("fileTransmitAMMEF");
+
 const btnSave =
     document.getElementById("btnSave");
 
