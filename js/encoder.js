@@ -605,7 +605,8 @@ async function handleMorseMessage() {
             encodeMorseIdent(
                 message,
                 chkUnencoded.checked,
-                comboBandwidth.value === "wide",
+                comboBandwidth.value ===
+                    "wide",
                 Number.parseFloat(
                     sliderCarrier.value
                 ) || 0
@@ -631,7 +632,14 @@ async function handleMorseMessage() {
 
         playAudioBlob(
             morseBlob
-        ).catch(console.error);
+        ).catch(
+            error => {
+                console.error(
+                    "Local Morse playback failed:",
+                    error
+                );
+            }
+        );
 
         enableSaveButton();
 
@@ -641,13 +649,13 @@ async function handleMorseMessage() {
                 "function"
         ) {
             await sendCurrentAMMEFToNetwork(
-    "morse",
-    {
-        morseText:
-            message
-    }
-);
-        
+                "morse",
+                {
+                    morseText:
+                        message
+                }
+            );
+        }
 
         txtStatus.textContent =
             networkConnected
@@ -664,7 +672,10 @@ async function handleMorseMessage() {
         );
 
         txtStatus.textContent =
-            `ERROR: ${error.message}`;
+            `ERROR: ${
+                error.message ||
+                "Could not encode Morse message."
+            }`;
 
         txtStatus.style.color =
             "#FF3333";
@@ -675,7 +686,6 @@ async function handleMorseMessage() {
         1000
     );
 }
-
 // ======================================================
 // Morse IDENT encoder
 // ======================================================
