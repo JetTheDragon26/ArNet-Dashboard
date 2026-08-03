@@ -641,9 +641,13 @@ async function handleMorseMessage() {
                 "function"
         ) {
             await sendCurrentAMMEFToNetwork(
-                "morse"
-            );
-        }
+    "morse",
+    {
+        morseText:
+            message
+    }
+);
+        
 
         txtStatus.textContent =
             networkConnected
