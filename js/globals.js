@@ -46,6 +46,13 @@ let currentAudioUrl = null;
 let audioPlaybackQueue = [];
 let audioQueueRunning = false;
 
+// ---------- Automated service display audio ----------
+let serviceAudioAmplitude =
+    0;
+
+let serviceAudioActiveTones =
+    0;
+
 // ---------- Frequency ----------
 let minFreq = 4550;
 let maxFreq = 6000;
