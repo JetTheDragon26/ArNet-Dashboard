@@ -958,7 +958,24 @@ async function handleNetworkMessage(
             );
 
             break;
+            
+case "ammef-stream-start":
+case "ammef-stream-chunk":
+case "ammef-stream-end":
+    if (
+        shouldReceiveNetworkTransmission(
+            message
+        ) &&
+        typeof handleIncomingArNetStreamMessage ===
+            "function"
+    ) {
+        await handleIncomingArNetStreamMessage(
+            message
+        );
+    }
 
+    break;
+            
         case "pong":
             break;
 
