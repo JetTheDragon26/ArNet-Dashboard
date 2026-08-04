@@ -85,6 +85,137 @@ const ARNET_TIME_HOUR_DURATION =
 const ARNET_TIME_HOUR_VOLUME =
     0.25;
 
+const ARNET_TIME_ZONES = {
+    local: {
+        label:
+            "AUTOMATIC LOCAL TIME",
+
+        offsetMinutes:
+            null
+    },
+
+    utc: {
+        label:
+            "COORDINATED UNIVERSAL TIME",
+
+        abbreviation:
+            "UTC",
+
+        offsetMinutes:
+            0
+    },
+
+    nw: {
+        label:
+            "NW TIME",
+
+        abbreviation:
+            "NWT",
+
+        offsetMinutes:
+            270
+    },
+
+    nc: {
+        label:
+            "NC TIME",
+
+        abbreviation:
+            "NCT",
+
+        offsetMinutes:
+            330
+    },
+
+    ne: {
+        label:
+            "NE TIME",
+
+        abbreviation:
+            "NET",
+
+        offsetMinutes:
+            390
+    },
+
+    klaxionic: {
+        label:
+            "KLAXÎONIC TIME",
+
+        abbreviation:
+            "KXT",
+
+        offsetMinutes:
+            330
+    },
+
+    wc: {
+        label:
+            "WC TIME",
+
+        abbreviation:
+            "WCT",
+
+        offsetMinutes:
+            240
+    },
+
+    ec: {
+        label:
+            "EC TIME",
+
+        abbreviation:
+            "ECT",
+
+        offsetMinutes:
+            300
+    },
+
+    sw: {
+        label:
+            "SW TIME",
+
+        abbreviation:
+            "SWT",
+
+        offsetMinutes:
+            210
+    },
+
+    se: {
+        label:
+            "SE TIME",
+
+        abbreviation:
+            "SET",
+
+        offsetMinutes:
+            270
+    },
+
+    as1: {
+        label:
+            "AS ZONE 1",
+
+        abbreviation:
+            "AS1",
+
+        offsetMinutes:
+            270
+    },
+
+    as2: {
+        label:
+            "AS ZONE 2",
+
+        abbreviation:
+            "AS2",
+
+        offsetMinutes:
+            300
+    }
+};
+
 // ======================================================
 // State
 // ======================================================
@@ -307,6 +438,54 @@ function createArNetTimePanel() {
                 </div>
             </div>
         </div>
+
+        <option value="local">
+    Automatic Local Time
+</option>
+
+<option value="klaxionic">
+    Klaxîonic Time — GMT+5:30
+</option>
+
+<option value="nw">
+    NW Time — GMT+4:30
+</option>
+
+<option value="nc">
+    NC Time — GMT+5:30
+</option>
+
+<option value="ne">
+    NE Time — GMT+6:30
+</option>
+
+<option value="wc">
+    WC Time — GMT+4:00
+</option>
+
+<option value="ec">
+    EC Time — GMT+5:00
+</option>
+
+<option value="sw">
+    SW Time — GMT+3:30
+</option>
+
+<option value="se">
+    SE Time — GMT+4:30
+</option>
+
+<option value="as1">
+    AS Zone 1 — GMT+4:30
+</option>
+
+<option value="as2">
+    AS Zone 2 — GMT+5:00
+</option>
+
+<option value="utc">
+    Coordinated Universal Time
+</option>
 
         <div
             style="
@@ -640,12 +819,31 @@ function updateArNetTimeDisplay() {
         return;
     }
 
-    const now =
-        new Date();
+   const networkNow =
+    typeof getArNetNetworkTime ===
+        "function"
+        ? getArNetNetworkTime()
+        : new Date();
 
-    setArNetTimeText(
-        "arnetTimeLocalClock",
-        now.toLocaleTimeString(
+const selectedZone =
+    ARNET_TIME_ZONES[
+        arnetSelectedTimeZone
+    ] ||
+    ARNET_TIME_ZONES.local;
+
+const displayTime =
+    getArNetSelectedZoneDate(
+        networkNow
+    );
+
+const now =
+    networkNow;
+
+ setArNetTimeText(
+    "arnetTimeLocalClock",
+    selectedZone.offsetMinutes ===
+        null
+        ? displayTime.toLocaleTimeString(
             [],
             {
                 hour12:
@@ -661,7 +859,29 @@ function updateArNetTimeDisplay() {
                     "2-digit"
             }
         )
-    );
+        : [
+            String(
+                displayTime.getUTCHours()
+            ).padStart(
+                2,
+                "0"
+            ),
+
+            String(
+                displayTime.getUTCMinutes()
+            ).padStart(
+                2,
+                "0"
+            ),
+
+            String(
+                displayTime.getUTCSeconds()
+            ).padStart(
+                2,
+                "0"
+            )
+        ].join(":")
+);
 
     setArNetTimeText(
         "arnetTimeLocalDate",
