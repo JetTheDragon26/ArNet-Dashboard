@@ -217,7 +217,15 @@ async function beginIncomingArNetStream(
                 new Map(),
 
             nextSequence:
-                0,
+    Number.isInteger(
+        Number(
+            message.startSequence
+        )
+    )
+        ? Number(
+            message.startSequence
+        )
+        : 0,
 
             startedPlayback:
                 false,
