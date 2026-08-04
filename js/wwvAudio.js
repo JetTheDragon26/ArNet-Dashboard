@@ -500,54 +500,61 @@ function waitForArNetWWVAudio(
 function getArNetWWVSprite(
     spriteName
 ) {
-    if (
-        typeof ARNET_WWV_SPRITES !==
-            "object" ||
-        !ARNET_WWV_SPRITES
-    ) {
+    const spriteMap =
+        ARNET_WWV_SPRITE_LAYOUT?.sprite;
+
+    if (!spriteMap) {
         throw new Error(
-            "ARNET_WWV_SPRITES is unavailable. " +
+            "The WWV sprite layout is unavailable. " +
             "Check that wwvSpriteData.js loaded first."
         );
     }
 
-    if (
-        spriteName ===
-            "atTheTone" ||
-        spriteName ===
-            "hour" ||
-        spriteName ===
-            "hours" ||
-        spriteName ===
-            "minute" ||
-        spriteName ===
-            "minutes" ||
-        spriteName ===
-            "utc"
-    ) {
-        return ARNET_WWV_SPRITES[
-            spriteName
-        ];
-    }
+    const prefix =
+        ARNET_WWV_VOICE_PREFIX;
+
+    const namedSprites = {
+        atTheTone:
+            `${prefix}_at_the_tone`,
+
+        hour:
+            `${prefix}_hour`,
+
+        hours:
+            `${prefix}_hours`,
+
+        minute:
+            `${prefix}_minute`,
+
+        minutes:
+            `${prefix}_minutes`,
+
+        utc:
+            `${prefix}_utc`
+    };
+
+    let originalSpriteName =
+        namedSprites[spriteName];
 
     if (
         typeof spriteName ===
             "number" ||
         /^\d+$/.test(
-            String(
-                spriteName
-            )
+            String(spriteName)
         )
     ) {
-        return ARNET_WWV_SPRITES
-            .numbers[
-                Number(
-                    spriteName
-                )
-            ];
+        originalSpriteName =
+            `${prefix}_${Number(spriteName)}`;
     }
 
-    return null;
+    if (!originalSpriteName) {
+        return null;
+    }
+
+    return (
+        spriteMap[originalSpriteName] ||
+        null
+    );
 }
 
 async function playWWVSprite(
