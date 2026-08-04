@@ -37,15 +37,20 @@ function updateBandList() {
 
         txtVideoLegend.style.display = "none";
     }
-    else if (mode === "ABM") {
-        addOption("AHFRS 1 (Low)");
+else if (mode === "ABM") {
+    addOption("UBA 2");
+    addOption("AHFRS 1 (Low)");
 
-        comboBand.selectedIndex = 0;
+    comboBand.selectedIndex = 0;
 
-        setButtonEnabled(btnLoad, true);
+    setButtonEnabled(
+        btnLoad,
+        true
+    );
 
-        txtVideoLegend.style.display = "none";
-    }
+    txtVideoLegend.style.display =
+        "none";
+}
     else if (mode === "ABMTV") {
         addOption("AHFRS 1 (High)");
 
@@ -63,6 +68,10 @@ function updateFrequencyLimits() {
     const selectedBand = comboBand.value;
 
     switch (selectedBand) {
+        case "UBA 2":
+            minFreq = 1800;
+            maxFreq = 3050;
+            break;    
         case "ALFRS":
             minFreq = 3050;
             maxFreq = 4455;
