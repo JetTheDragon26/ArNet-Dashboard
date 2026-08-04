@@ -1630,3 +1630,38 @@ if (
         handleAMMEFTransmitSelection
     );
 }
+
+const retuneCurrentNetworkChannel =
+    () => {
+        if (
+            typeof stopAllIncomingArNetStreams ===
+                "function"
+        ) {
+            stopAllIncomingArNetStreams();
+        }
+
+        tuneNetworkFrequency(
+            getNetworkFrequency()
+        );
+    };
+
+if (comboMode) {
+    comboMode.addEventListener(
+        "change",
+        retuneCurrentNetworkChannel
+    );
+}
+
+if (comboBand) {
+    comboBand.addEventListener(
+        "change",
+        retuneCurrentNetworkChannel
+    );
+}
+
+if (comboBandwidth) {
+    comboBandwidth.addEventListener(
+        "change",
+        retuneCurrentNetworkChannel
+    );
+}
