@@ -30,6 +30,24 @@ const ARNET_WEATHER_MORSE_FREQUENCY =
 const ARNET_WEATHER_MORSE_WPM =
     18;
 
+const ARNET_WEATHER_ALERT_REFRESH_MS =
+    60 * 1000;
+
+const ARNET_WEATHER_ALERT_MORSE_TEXT =
+    "WXA WXA DE UBA-WD-001";
+
+const ARNET_WEATHER_NORMAL_BORDER =
+    "1px solid #006688";
+
+const ARNET_WEATHER_NORMAL_BACKGROUND =
+    "#071015";
+
+const ARNET_WEATHER_ALERT_BORDER =
+    "2px solid #FF3300";
+
+const ARNET_WEATHER_ALERT_BACKGROUND =
+    "#250600";
+
 let arnetWeatherMorseTimer =
     null;
 
@@ -40,6 +58,21 @@ let arnetWeatherMorsePlaying =
     false;
 
 let arnetWeatherAudioUnlocked =
+    false;
+
+let arnetWeatherAlertTimer =
+    null;
+
+let arnetWeatherAlertRequestRunning =
+    false;
+
+let arnetWeatherActiveAlerts =
+    [];
+
+let arnetWeatherLastAlertSignature =
+    "";
+
+let arnetWeatherAlertMorsePlaying =
     false;
 
 /*
@@ -259,36 +292,120 @@ function createArNetWeatherPanel() {
         <div
             id="weatherAlertBox"
             style="
-                display:none;
+                display:block;
                 margin-top:7px;
-                padding:7px;
-                background:#331000;
-                border:1px solid #AA3300;
-                color:#FFAA66;
-                font-size:10px;
-                font-weight:bold;
+                padding:8px;
+                background:#080C0E;
+                border:1px solid #294047;
+                color:#AAAAAA;
             "
         >
-            WEATHER ALERT
+            <div
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    gap:8px;
+                "
+            >
+                <div
+                    id="weatherAlertHeadline"
+                    style="
+                        color:#AAAAAA;
+                        font-size:10px;
+                        font-weight:bold;
+                    "
+                >
+                    WEATHER ALERTS
+                </div>
+
+                <div
+                    id="weatherAlertSeverity"
+                    style="
+                        color:#AAAAAA;
+                        background:#182226;
+                        padding:2px 5px;
+                        font-size:8px;
+                        font-weight:bold;
+                    "
+                >
+                    CHECKING
+                </div>
+            </div>
+
+            <div
+                id="weatherAlertArea"
+                style="
+                    color:#77888C;
+                    font-size:9px;
+                    margin-top:4px;
+                "
+            >
+                Checking active alerts for
+                ${escapeWeatherHtml(
+                    ARNET_WEATHER_LOCATION.name
+                )}...
+            </div>
+
+            <div
+                id="weatherAlertDescription"
+                style="
+                    color:#CCCCCC;
+                    font-size:10px;
+                    line-height:1.35;
+                    margin-top:6px;
+                    max-height:120px;
+                    overflow-y:auto;
+                    white-space:pre-wrap;
+                "
+            >
+                Waiting for official alert data.
+            </div>
+
+            <div
+                id="weatherAlertInstruction"
+                style="
+                    display:none;
+                    color:#FFDD88;
+                    font-size:9px;
+                    line-height:1.35;
+                    margin-top:6px;
+                    padding-top:6px;
+                    border-top:1px solid #773300;
+                    white-space:pre-wrap;
+                "
+            >
+            </div>
+
+            <div
+                id="weatherAlertCount"
+                style="
+                    color:#66777A;
+                    font-size:8px;
+                    margin-top:6px;
+                "
+            >
+                Alert status not loaded yet.
+            </div>
         </div>
 
         <button
-    id="btnEnableWeatherAudio"
-    type="button"
-    style="
-        width:100%;
-        margin-top:7px;
-        padding:6px;
-        background:#004466;
-        border:1px solid #0088AA;
-        color:#FFFFFF;
-        font-size:10px;
-        font-weight:bold;
-        cursor:pointer;
-    "
->
-    ENABLE WEATHER MORSE AUDIO
-</button>
+            id="btnEnableWeatherAudio"
+            type="button"
+            style="
+                width:100%;
+                margin-top:7px;
+                padding:6px;
+                background:#004466;
+                border:1px solid #0088AA;
+                color:#FFFFFF;
+                font-size:10px;
+                font-weight:bold;
+                cursor:pointer;
+            "
+        >
+            ENABLE WEATHER MORSE AUDIO
+        </button>
 
         <div
             id="weatherServiceMessage"
@@ -308,7 +425,7 @@ function createArNetWeatherPanel() {
                 margin-top:4px;
             "
         >
-            Weather data: Open-Meteo
+            Weather data: Open-Meteo · Alerts: National Weather Service
         </div>
     `;
 
@@ -343,16 +460,16 @@ function createArNetWeatherPanel() {
         panel;
 
     const enableAudioButton =
-    document.getElementById(
-        "btnEnableWeatherAudio"
-    );
+        panel.querySelector(
+            "#btnEnableWeatherAudio"
+        );
 
-if (enableAudioButton) {
-    enableAudioButton.addEventListener(
-        "click",
-        enableArNetWeatherAudio
-    );
-}
+    if (enableAudioButton) {
+        enableAudioButton.addEventListener(
+            "click",
+            enableArNetWeatherAudio
+        );
+    }
 
     return panel;
 }
