@@ -591,20 +591,27 @@ function activateArNetWeatherChannel() {
 
     setWeatherElementText(
         "weatherServiceState",
-        "DATA LOCK"
+        "CONNECTING"
     );
 
     setWeatherElementColor(
         "weatherServiceState",
-        "#00FF7F"
+        "#FFD700"
     );
 
     setWeatherElementText(
         "weatherServiceMessage",
-        "Receiving current weather data..."
+        "Connecting to UBA-WD-001..."
+    );
+
+    setWeatherElementText(
+        "weatherAlertSeverity",
+        "CHECKING"
     );
 
     fetchArNetWeatherData();
+
+    fetchArNetWeatherAlerts();
 
     startArNetWeatherMorseService();
 
@@ -622,6 +629,22 @@ function activateArNetWeatherChannel() {
                 }
             },
             ARNET_WEATHER_REFRESH_MS
+        );
+
+    clearInterval(
+        arnetWeatherAlertTimer
+    );
+
+    arnetWeatherAlertTimer =
+        setInterval(
+            () => {
+                if (
+                    arnetWeatherChannelActive
+                ) {
+                    fetchArNetWeatherAlerts();
+                }
+            },
+            ARNET_WEATHER_ALERT_REFRESH_MS
         );
 }
 
@@ -642,12 +665,22 @@ function deactivateArNetWeatherChannel() {
             null;
     }
 
+    if (
+        arnetWeatherAlertTimer
+    ) {
+        clearInterval(
+            arnetWeatherAlertTimer
+        );
+
+        arnetWeatherAlertTimer =
+            null;
+    }
+
     if (arnetWeatherPanel) {
         arnetWeatherPanel.style.display =
             "none";
     }
 }
-
 // ======================================================
 // Weather API
 // ======================================================
@@ -1180,6 +1213,329 @@ function renderArNetWeatherData(
     setWeatherElementText(
         "weatherServiceMessage",
         "Live weather received. Automatic refresh every 10 minutes."
+    );
+}
+
+function renderArNetWeatherAlerts(
+    alerts
+) {
+    arnetWeatherActiveAlerts =
+        alerts;
+
+    if (!alerts.length) {
+        renderNoArNetWeatherAlerts();
+
+        return;
+    }
+
+    const primaryAlert =
+        alerts[0];
+
+    if (arnetWeatherPanel) {
+        arnetWeatherPanel.style.border =
+            ARNET_WEATHER_ALERT_BORDER;
+
+        arnetWeatherPanel.style.background =
+            ARNET_WEATHER_ALERT_BACKGROUND;
+    }
+
+    const alertBox =
+        document.getElementById(
+            "weatherAlertBox"
+        );
+
+    if (alertBox) {
+        alertBox.style.background =
+            "#331000";
+
+        alertBox.style.border =
+            "1px solid #AA3300";
+    }
+
+    setWeatherElementText(
+        "weatherAlertHeadline",
+        primaryAlert.headline
+    );
+
+    setWeatherElementColor(
+        "weatherAlertHeadline",
+        "#FF6633"
+    );
+
+    setWeatherElementText(
+        "weatherAlertSeverity",
+        primaryAlert.severity
+            .toUpperCase()
+    );
+
+    setWeatherElementColor(
+        "weatherAlertSeverity",
+        "#FFFFFF"
+    );
+
+    const severityElement =
+        document.getElementById(
+            "weatherAlertSeverity"
+        );
+
+    if (severityElement) {
+        severityElement.style.background =
+            "#881100";
+    }
+
+    setWeatherElementText(
+        "weatherAlertArea",
+        primaryAlert.area
+    );
+
+    setWeatherElementColor(
+        "weatherAlertArea",
+        "#FFCC99"
+    );
+
+    setWeatherElementText(
+        "weatherAlertDescription",
+        primaryAlert.description ||
+        "No alert description was supplied."
+    );
+
+    setWeatherElementColor(
+        "weatherAlertDescription",
+        "#FFFFFF"
+    );
+
+    const instructionElement =
+        document.getElementById(
+            "weatherAlertInstruction"
+        );
+
+    if (instructionElement) {
+        if (
+            primaryAlert.instruction
+        ) {
+            instructionElement.style.display =
+                "block";
+
+            instructionElement.textContent =
+                "INSTRUCTIONS:\n" +
+                primaryAlert.instruction;
+        }
+        else {
+            instructionElement.style.display =
+                "none";
+
+            instructionElement.textContent =
+                "";
+        }
+    }
+
+    setWeatherElementText(
+        "weatherAlertCount",
+        createArNetWeatherAlertSummary(
+            alerts,
+            primaryAlert
+        )
+    );
+
+    setWeatherElementColor(
+        "weatherAlertCount",
+        "#CC8866"
+    );
+
+    setWeatherElementText(
+        "weatherServiceState",
+        "WEATHER ALERT"
+    );
+
+    setWeatherElementColor(
+        "weatherServiceState",
+        "#FF5533"
+    );
+}
+
+function renderNoArNetWeatherAlerts() {
+    if (arnetWeatherPanel) {
+        arnetWeatherPanel.style.border =
+            ARNET_WEATHER_NORMAL_BORDER;
+
+        arnetWeatherPanel.style.background =
+            ARNET_WEATHER_NORMAL_BACKGROUND;
+    }
+
+    const alertBox =
+        document.getElementById(
+            "weatherAlertBox"
+        );
+
+    if (alertBox) {
+        alertBox.style.background =
+            "#080C0E";
+
+        alertBox.style.border =
+            "1px solid #294047";
+    }
+
+    setWeatherElementText(
+        "weatherAlertHeadline",
+        "WEATHER ALERTS"
+    );
+
+    setWeatherElementColor(
+        "weatherAlertHeadline",
+        "#AAAAAA"
+    );
+
+    setWeatherElementText(
+        "weatherAlertSeverity",
+        "CLEAR"
+    );
+
+    setWeatherElementColor(
+        "weatherAlertSeverity",
+        "#00FF7F"
+    );
+
+    const severityElement =
+        document.getElementById(
+            "weatherAlertSeverity"
+        );
+
+    if (severityElement) {
+        severityElement.style.background =
+            "#123322";
+    }
+
+    setWeatherElementText(
+        "weatherAlertArea",
+        ARNET_WEATHER_LOCATION.name
+    );
+
+    setWeatherElementColor(
+        "weatherAlertArea",
+        "#77888C"
+    );
+
+    setWeatherElementText(
+        "weatherAlertDescription",
+        "No active National Weather Service alerts."
+    );
+
+    setWeatherElementColor(
+        "weatherAlertDescription",
+        "#CCCCCC"
+    );
+
+    const instructionElement =
+        document.getElementById(
+            "weatherAlertInstruction"
+        );
+
+    if (instructionElement) {
+        instructionElement.style.display =
+            "none";
+
+        instructionElement.textContent =
+            "";
+    }
+
+    setWeatherElementText(
+        "weatherAlertCount",
+        "0 active alerts."
+    );
+
+    setWeatherElementColor(
+        "weatherAlertCount",
+        "#66777A"
+    );
+
+    setWeatherElementText(
+        "weatherServiceState",
+        "DATA LOCK"
+    );
+
+    setWeatherElementColor(
+        "weatherServiceState",
+        "#00FF7F"
+    );
+}
+
+function renderArNetWeatherAlertError(
+    error
+) {
+    setWeatherElementText(
+        "weatherAlertHeadline",
+        "WEATHER ALERTS"
+    );
+
+    setWeatherElementText(
+        "weatherAlertSeverity",
+        "ERROR"
+    );
+
+    setWeatherElementColor(
+        "weatherAlertSeverity",
+        "#FF3333"
+    );
+
+    setWeatherElementText(
+        "weatherAlertArea",
+        ARNET_WEATHER_LOCATION.name
+    );
+
+    setWeatherElementText(
+        "weatherAlertDescription",
+        "Official alert data could not be loaded."
+    );
+
+    setWeatherElementText(
+        "weatherAlertCount",
+        error?.message ||
+        "Alert service unavailable."
+    );
+}
+
+function createArNetWeatherAlertSummary(
+    alerts,
+    primaryAlert
+) {
+    const alertCountText =
+        alerts.length === 1
+            ? "1 active alert."
+            : `${alerts.length} active alerts.`;
+
+    if (!primaryAlert.expires) {
+        return alertCountText;
+    }
+
+    const expiration =
+        new Date(
+            primaryAlert.expires
+        );
+
+    if (
+        Number.isNaN(
+            expiration.getTime()
+        )
+    ) {
+        return alertCountText;
+    }
+
+    return (
+        `${alertCountText} Primary alert expires ` +
+        expiration.toLocaleString(
+            [],
+            {
+                weekday:
+                    "short",
+
+                hour:
+                    "numeric",
+
+                minute:
+                    "2-digit"
+            }
+        ) +
+        "."
     );
 }
 
