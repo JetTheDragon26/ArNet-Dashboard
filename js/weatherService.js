@@ -777,6 +777,256 @@ async function fetchArNetWeatherData() {
 }
 
 // ======================================================
+// Official NWS weather alerts
+// ======================================================
+
+async function fetchArNetWeatherAlerts() {
+    if (
+        arnetWeatherAlertRequestRunning ||
+        !arnetWeatherChannelActive
+    ) {
+        return;
+    }
+
+    arnetWeatherAlertRequestRunning =
+        true;
+
+    setWeatherElementText(
+        "weatherAlertSeverity",
+        "CHECKING"
+    );
+
+    try {
+        const latitude =
+            ARNET_WEATHER_LOCATION.latitude;
+
+        const longitude =
+            ARNET_WEATHER_LOCATION.longitude;
+
+        const alertUrl =
+            "https://api.weather.gov/alerts/active" +
+            `?point=${latitude},${longitude}`;
+
+        const response =
+            await fetch(
+                alertUrl,
+                {
+                    headers: {
+                        Accept:
+                            "application/geo+json"
+                    },
+
+                    cache:
+                        "no-store"
+                }
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `NWS alert service returned ${response.status}.`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        if (
+            !arnetWeatherChannelActive
+        ) {
+            return;
+        }
+
+        const alerts =
+            Array.isArray(
+                data.features
+            )
+                ? data.features
+                    .map(
+                        normalizeArNetWeatherAlert
+                    )
+                    .filter(
+                        Boolean
+                    )
+                : [];
+
+        alerts.sort(
+            compareArNetWeatherAlerts
+        );
+
+        renderArNetWeatherAlerts(
+            alerts
+        );
+    }
+    catch (error) {
+        console.error(
+            "ArNet NWS alert request failed:",
+            error
+        );
+
+        renderArNetWeatherAlertError(
+            error
+        );
+    }
+    finally {
+        arnetWeatherAlertRequestRunning =
+            false;
+    }
+}
+
+function normalizeArNetWeatherAlert(
+    feature
+) {
+    const properties =
+        feature?.properties;
+
+    if (!properties) {
+        return null;
+    }
+
+    return {
+        id:
+            String(
+                feature.id ||
+                properties.id ||
+                ""
+            ),
+
+        event:
+            String(
+                properties.event ||
+                "Weather Alert"
+            ),
+
+        headline:
+            String(
+                properties.headline ||
+                properties.event ||
+                "Weather Alert"
+            ),
+
+        severity:
+            String(
+                properties.severity ||
+                "Unknown"
+            ),
+
+        urgency:
+            String(
+                properties.urgency ||
+                "Unknown"
+            ),
+
+        area:
+            String(
+                properties.areaDesc ||
+                ARNET_WEATHER_LOCATION.name
+            ),
+
+        description:
+            cleanArNetWeatherAlertText(
+                properties.description
+            ),
+
+        instruction:
+            cleanArNetWeatherAlertText(
+                properties.instruction
+            ),
+
+        sent:
+            properties.sent ||
+            "",
+
+        expires:
+            properties.expires ||
+            ""
+    };
+}
+
+function cleanArNetWeatherAlertText(
+    value
+) {
+    return String(
+        value ||
+        ""
+    )
+        .replace(
+            /\r\n/g,
+            "\n"
+        )
+        .replace(
+            /\n{3,}/g,
+            "\n\n"
+        )
+        .trim();
+}
+
+function getArNetWeatherAlertPriority(
+    alert
+) {
+    const severityPriority = {
+        Extreme:
+            4,
+
+        Severe:
+            3,
+
+        Moderate:
+            2,
+
+        Minor:
+            1,
+
+        Unknown:
+            0
+    };
+
+    const urgencyPriority = {
+        Immediate:
+            4,
+
+        Expected:
+            3,
+
+        Future:
+            2,
+
+        Past:
+            1,
+
+        Unknown:
+            0
+    };
+
+    return (
+        (
+            severityPriority[
+                alert.severity
+            ] || 0
+        ) *
+        10
+    ) +
+    (
+        urgencyPriority[
+            alert.urgency
+        ] || 0
+    );
+}
+
+function compareArNetWeatherAlerts(
+    first,
+    second
+) {
+    return (
+        getArNetWeatherAlertPriority(
+            second
+        ) -
+        getArNetWeatherAlertPriority(
+            first
+        )
+    );
+}
+
+// ======================================================
 // Weather rendering
 // ======================================================
 
