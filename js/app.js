@@ -38,19 +38,17 @@ function updateBandList() {
         txtVideoLegend.style.display = "none";
     }
 else if (mode === "ABM") {
-    addOption("UBA 2");
+
     addOption("AHFRS 1 (Low)");
+    addOption("UBA 2");
 
-    comboBand.selectedIndex = 0;
+    comboBand.value = "AHFRS 1 (Low)";
 
-    setButtonEnabled(
-        btnLoad,
-        true
-    );
+    setButtonEnabled(btnLoad, true);
 
-    txtVideoLegend.style.display =
-        "none";
+    txtVideoLegend.style.display = "none";
 }
+    
     else if (mode === "ABMTV") {
         addOption("AHFRS 1 (High)");
 
