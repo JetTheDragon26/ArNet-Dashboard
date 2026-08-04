@@ -70,10 +70,10 @@ function updateFrequencyLimits() {
     switch (selectedBand) {
         case "UBA 2":
             minFreq = 1800;
-            maxFreq = 3050;
+            maxFreq = 3049;
             break;    
         case "ALFRS":
-            minFreq = 3050;
+            minFreq = 3055;
             maxFreq = 4455;
             break;
 
@@ -84,12 +84,12 @@ function updateFrequencyLimits() {
 
         case "AHFRS 1 (Low)":
             minFreq = 6500;
-            maxFreq = 7500;
+            maxFreq = 7499;
             break;
 
         case "AHFRS 1 (High)":
             minFreq = 7500;
-            maxFreq = 8000;
+            maxFreq = 7999;
             break;
 
         case "AHFRS 2":
