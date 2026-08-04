@@ -69,6 +69,9 @@ const ARNET_TIME_MINUTE_VOLUME =
 const ARNET_TIME_BACKGROUND_FREQUENCY =
     500;
 
+const ARNET_TIME_BACKGROUND_VOLUME =
+    0.045;
+
 /*
  * At the beginning of an hour, use a slightly higher
  * tone to distinguish it from an ordinary minute.
