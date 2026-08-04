@@ -63,6 +63,9 @@ let arnetWeatherAudioUnlocked =
 let arnetWeatherAlertTimer =
     null;
 
+let arnetWeatherDisplayTimers =
+    new Set();
+
 let arnetWeatherAlertRequestRunning =
     false;
 
@@ -652,6 +655,8 @@ function deactivateArNetWeatherChannel() {
     arnetWeatherChannelActive =
         false;
 
+stopArNetWeatherDisplayActivity();
+    
     stopArNetWeatherMorseService();
 
     if (
@@ -2045,6 +2050,131 @@ async function playArNetWeatherMorseIdent() {
     );
 }
 
+function beginArNetWeatherDisplayTone() {
+    serviceAudioActiveTones++;
+
+    /*
+     * Morse signals appear fairly strong but not
+     * completely full-scale.
+     */
+    serviceAudioAmplitude =
+        0.68;
+
+    txtTxState.textContent =
+        "WX";
+
+    boxTxState.style.background =
+        "#004466";
+}
+
+function endArNetWeatherDisplayTone() {
+    serviceAudioActiveTones =
+        Math.max(
+            0,
+            serviceAudioActiveTones -
+                1
+        );
+
+    if (
+        serviceAudioActiveTones ===
+            0
+    ) {
+        serviceAudioAmplitude =
+            0;
+
+        if (
+            arnetWeatherChannelActive
+        ) {
+            txtTxState.textContent =
+                "RX";
+
+            boxTxState.style.background =
+                "#330000";
+        }
+    }
+}
+
+function scheduleArNetWeatherDisplayActivity(
+    startTime,
+    durationSeconds
+) {
+    if (!audioCtx) {
+        return;
+    }
+
+    const startDelayMs =
+        Math.max(
+            0,
+            (
+                startTime -
+                audioCtx.currentTime
+            ) *
+            1000
+        );
+
+    const endDelayMs =
+        startDelayMs +
+        (
+            durationSeconds *
+            1000
+        );
+
+    const startTimer =
+        setTimeout(
+            () => {
+                arnetWeatherDisplayTimers.delete(
+                    startTimer
+                );
+
+                if (
+                    arnetWeatherChannelActive
+                ) {
+                    beginArNetWeatherDisplayTone();
+                }
+            },
+            startDelayMs
+        );
+
+    const endTimer =
+        setTimeout(
+            () => {
+                arnetWeatherDisplayTimers.delete(
+                    endTimer
+                );
+
+                endArNetWeatherDisplayTone();
+            },
+            endDelayMs
+        );
+
+    arnetWeatherDisplayTimers.add(
+        startTimer
+    );
+
+    arnetWeatherDisplayTimers.add(
+        endTimer
+    );
+}
+
+function stopArNetWeatherDisplayActivity() {
+    for (
+        const timer of
+        arnetWeatherDisplayTimers
+    ) {
+        clearTimeout(
+            timer
+        );
+    }
+
+    arnetWeatherDisplayTimers.clear();
+
+    serviceAudioActiveTones =
+        0;
+
+    serviceAudioAmplitude =
+        0;
+}
+
 function scheduleArNetWeatherMorseTone(
     startTime,
     durationSeconds
@@ -2063,6 +2193,11 @@ function scheduleArNetWeatherMorseTone(
         startTime
     );
 
+    scheduleArNetWeatherDisplayActivity(
+    startTime,
+    durationSeconds
+);
+    
     /*
      * Short fade-in and fade-out prevents clicks.
      */
@@ -2131,6 +2266,7 @@ function scheduleArNetWeatherMorseTone(
 }
 
 function startArNetWeatherMorseService() {
+    stopArNetWeatherDisplayActivity();
     stopArNetWeatherMorseService();
 
     /*
