@@ -1640,11 +1640,38 @@ const retuneCurrentNetworkChannel =
             stopAllIncomingArNetStreams();
         }
 
-        tuneNetworkFrequency(
-            getNetworkFrequency()
+        /*
+         * Wait until app.js finishes updating the
+         * frequency limits for the newly selected band.
+         */
+        setTimeout(
+            () => {
+                const frequency =
+                    getNetworkFrequency();
+
+                console.log(
+                    "[ArNet] Retuning channel:",
+                    {
+                        frequency,
+
+                        mode:
+                            comboMode.value,
+
+                        band:
+                            comboBand.value,
+
+                        bandwidth:
+                            comboBandwidth.value
+                    }
+                );
+
+                tuneNetworkFrequency(
+                    frequency
+                );
+            },
+            0
         );
     };
-
 if (comboMode) {
     comboMode.addEventListener(
         "change",
@@ -1663,5 +1690,35 @@ if (comboBandwidth) {
     comboBandwidth.addEventListener(
         "change",
         retuneCurrentNetworkChannel
+    );
+}
+
+if (txtFrequency) {
+    txtFrequency.addEventListener(
+        "change",
+        () => {
+            setTimeout(
+                () => {
+                    tuneNetworkFrequency(
+                        getNetworkFrequency()
+                    );
+                },
+                0
+            );
+        }
+    );
+
+    txtFrequency.addEventListener(
+        "blur",
+        () => {
+            setTimeout(
+                () => {
+                    tuneNetworkFrequency(
+                        getNetworkFrequency()
+                    );
+                },
+                0
+            );
+        }
     );
 }
