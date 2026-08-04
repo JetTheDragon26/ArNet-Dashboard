@@ -18,6 +18,27 @@ const ARNET_WEATHER_BAND =
 const ARNET_WEATHER_REFRESH_MS =
     10 * 60 * 1000;
 
+const ARNET_WEATHER_MORSE_TEXT =
+    "WX WX WX DE UBA-WD-001";
+
+const ARNET_WEATHER_MORSE_INTERVAL_MS =
+    60 * 1000;
+
+const ARNET_WEATHER_MORSE_FREQUENCY =
+    700;
+
+const ARNET_WEATHER_MORSE_WPM =
+    18;
+
+let arnetWeatherMorseTimer =
+    null;
+
+let arnetWeatherMorseSources =
+    new Set();
+
+let arnetWeatherMorsePlaying =
+    false;
+
 /*
  * Default location:
  * Wheat Ridge, Colorado
@@ -435,6 +456,8 @@ function activateArNetWeatherChannel() {
 
     fetchArNetWeatherData();
 
+    startArNetWeatherMorseService();
+
     clearInterval(
         arnetWeatherRefreshTimer
     );
@@ -455,6 +478,8 @@ function activateArNetWeatherChannel() {
 function deactivateArNetWeatherChannel() {
     arnetWeatherChannelActive =
         false;
+
+    stopArNetWeatherMorseService();
 
     if (
         arnetWeatherRefreshTimer
@@ -997,6 +1022,343 @@ function escapeWeatherHtml(
             "'",
             "&#039;"
         );
+}
+
+// ======================================================
+// Weather-channel Morse identification
+// ======================================================
+
+function getArNetWeatherMorseUnitSeconds() {
+    return (
+        1.2 /
+        ARNET_WEATHER_MORSE_WPM
+    );
+}
+
+async function playArNetWeatherMorseIdent() {
+    if (
+        !arnetWeatherChannelActive ||
+        arnetWeatherMorsePlaying
+    ) {
+        return;
+    }
+
+    if (
+        typeof textToMorse !==
+            "function"
+    ) {
+        console.warn(
+            "Weather Morse ID unavailable: " +
+            "morse.js has not loaded."
+        );
+
+        return;
+    }
+
+    initAudioContext();
+
+    if (!audioCtx) {
+        return;
+    }
+
+    try {
+        if (
+            audioCtx.state ===
+                "suspended"
+        ) {
+            await audioCtx.resume();
+        }
+    }
+    catch (error) {
+        console.warn(
+            "Weather Morse audio could not start:",
+            error
+        );
+
+        return;
+    }
+
+    if (
+        !arnetWeatherChannelActive
+    ) {
+        return;
+    }
+
+    arnetWeatherMorsePlaying =
+        true;
+
+    const unit =
+        getArNetWeatherMorseUnitSeconds();
+
+    const morse =
+        textToMorse(
+            ARNET_WEATHER_MORSE_TEXT
+        );
+
+    let scheduledTime =
+        audioCtx.currentTime +
+        0.08;
+
+    /*
+     * textToMorse() produces:
+     *
+     * one space between Morse letters
+     * three spaces between words
+     */
+    const tokens =
+        morse.split(
+            /(\s+)/
+        );
+
+    for (
+        const token of
+        tokens
+    ) {
+        if (
+            !arnetWeatherChannelActive
+        ) {
+            break;
+        }
+
+        if (
+            !token
+        ) {
+            continue;
+        }
+
+        if (
+            /^\s+$/.test(
+                token
+            )
+        ) {
+            /*
+             * A single separator represents the normal
+             * three-unit gap between letters.
+             *
+             * Longer separators represent the seven-unit
+             * gap between words.
+             */
+            scheduledTime +=
+                token.length >= 3
+                    ? unit * 7
+                    : unit * 3;
+
+            continue;
+        }
+
+        for (
+            let index = 0;
+            index < token.length;
+            index++
+        ) {
+            const symbol =
+                token[index];
+
+            const toneDuration =
+                symbol === "-"
+                    ? unit * 3
+                    : unit;
+
+            scheduleArNetWeatherMorseTone(
+                scheduledTime,
+                toneDuration
+            );
+
+            scheduledTime +=
+                toneDuration;
+
+            /*
+             * One Morse unit between symbols in the same
+             * letter.
+             */
+            if (
+                index <
+                token.length - 1
+            ) {
+                scheduledTime +=
+                    unit;
+            }
+        }
+    }
+
+    const playbackDurationMs =
+        Math.max(
+            0,
+            (
+                scheduledTime -
+                audioCtx.currentTime
+            ) *
+            1000
+        );
+
+    setWeatherElementText(
+        "weatherServiceMessage",
+        `Morse ID: ${ARNET_WEATHER_MORSE_TEXT}`
+    );
+
+    setTimeout(
+        () => {
+            arnetWeatherMorsePlaying =
+                false;
+
+            if (
+                arnetWeatherChannelActive
+            ) {
+                setWeatherElementText(
+                    "weatherServiceMessage",
+                    "Live weather received. " +
+                    "Automatic refresh every 10 minutes."
+                );
+            }
+        },
+        playbackDurationMs + 100
+    );
+}
+
+function scheduleArNetWeatherMorseTone(
+    startTime,
+    durationSeconds
+) {
+    const oscillator =
+        audioCtx.createOscillator();
+
+    const gain =
+        audioCtx.createGain();
+
+    oscillator.type =
+        "sine";
+
+    oscillator.frequency.setValueAtTime(
+        ARNET_WEATHER_MORSE_FREQUENCY,
+        startTime
+    );
+
+    /*
+     * Short fade-in and fade-out prevents clicks.
+     */
+    gain.gain.setValueAtTime(
+        0,
+        startTime
+    );
+
+    gain.gain.linearRampToValueAtTime(
+        0.18,
+        startTime + 0.004
+    );
+
+    gain.gain.setValueAtTime(
+        0.18,
+        Math.max(
+            startTime + 0.004,
+            startTime +
+                durationSeconds -
+                0.004
+        )
+    );
+
+    gain.gain.linearRampToValueAtTime(
+        0,
+        startTime +
+            durationSeconds
+    );
+
+    oscillator.connect(
+        gain
+    );
+
+    gain.connect(
+        audioCtx.destination
+    );
+
+    oscillator.start(
+        startTime
+    );
+
+    oscillator.stop(
+        startTime +
+            durationSeconds +
+            0.01
+    );
+
+    arnetWeatherMorseSources.add(
+        oscillator
+    );
+
+    oscillator.addEventListener(
+        "ended",
+        () => {
+            arnetWeatherMorseSources.delete(
+                oscillator
+            );
+
+            oscillator.disconnect();
+            gain.disconnect();
+        },
+        {
+            once: true
+        }
+    );
+}
+
+function startArNetWeatherMorseService() {
+    stopArNetWeatherMorseService();
+
+    /*
+     * Give the dashboard a moment to finish tuning before
+     * playing the first station identification.
+     */
+    setTimeout(
+        () => {
+            if (
+                arnetWeatherChannelActive
+            ) {
+                playArNetWeatherMorseIdent();
+            }
+        },
+        1500
+    );
+
+    arnetWeatherMorseTimer =
+        setInterval(
+            () => {
+                if (
+                    arnetWeatherChannelActive
+                ) {
+                    playArNetWeatherMorseIdent();
+                }
+            },
+            ARNET_WEATHER_MORSE_INTERVAL_MS
+        );
+}
+
+function stopArNetWeatherMorseService() {
+    if (
+        arnetWeatherMorseTimer
+    ) {
+        clearInterval(
+            arnetWeatherMorseTimer
+        );
+
+        arnetWeatherMorseTimer =
+            null;
+    }
+
+    for (
+        const source of
+        arnetWeatherMorseSources
+    ) {
+        try {
+            source.stop();
+        }
+        catch {
+            // It may already have finished.
+        }
+    }
+
+    arnetWeatherMorseSources.clear();
+
+    arnetWeatherMorsePlaying =
+        false;
 }
 
 // ======================================================
