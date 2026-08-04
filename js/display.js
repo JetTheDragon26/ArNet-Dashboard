@@ -102,6 +102,12 @@ function getPcmRms(
  * @returns {number}
  */
 function getCurrentAudioAmplitude() {
+    if (
+    serviceAudioAmplitude >
+        0
+) {
+    return serviceAudioAmplitude;
+}
     if (isRecording) {
         const carrierValue =
             Number.parseFloat(
