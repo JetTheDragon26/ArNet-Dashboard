@@ -66,6 +66,9 @@ const ARNET_TIME_MINUTE_DURATION =
 const ARNET_TIME_MINUTE_VOLUME =
     0.24;
 
+const ARNET_TIME_BACKGROUND_FREQUENCY =
+    500;
+
 /*
  * At the beginning of an hour, use a slightly higher
  * tone to distinguish it from an ordinary minute.
@@ -115,6 +118,12 @@ let arnetTimeToneDisplayTimers =
 
 let arnetTimeActiveDisplayTones =
     0;
+
+let arnetTimeBackgroundOscillator =
+    null;
+
+let arnetTimeBackgroundGain =
+    null;
 
 // ======================================================
 // Time panel
@@ -566,6 +575,12 @@ function activateArNetTimeChannel() {
     startArNetTimeScheduler();
 }
 
+if (
+    arnetTimeAudioUnlocked
+) {
+    startArNetTimeBackgroundTone();
+}
+
 function deactivateArNetTimeChannel() {
     if (
         !arnetTimeChannelActive &&
@@ -593,6 +608,8 @@ function deactivateArNetTimeChannel() {
     }
 
     stopArNetTimeScheduler();
+
+    stopArNetTimeBackgroundTone();
 
     stopArNetTimeTones();
 
@@ -836,6 +853,8 @@ async function enableArNetTimeAudio() {
 
         arnetTimeAudioUnlocked =
             true;
+
+       startArNetTimeBackgroundTone();
 
         const button =
             document.getElementById(
@@ -1133,6 +1152,11 @@ async function startArNetTimeAnnouncement(
         )
     );
 
+        setArNetTimeBackgroundLevel(
+    0.012,
+    0.12
+);
+
     try {
         await playFullTimeStationAnnouncement(
             announcedHour,
@@ -1153,6 +1177,11 @@ async function startArNetTimeAnnouncement(
         );
     }
     finally {
+        setArNetTimeBackgroundLevel(
+    ARNET_TIME_BACKGROUND_VOLUME,
+    0.2
+);
+
         if (
             arnetTimeChannelActive
         ) {
@@ -1295,6 +1324,162 @@ function playArNetMinuteMarker(
             }
         },
         1200
+    );
+}
+
+// ======================================================
+// Continuous background tone
+// ======================================================
+
+function startArNetTimeBackgroundTone() {
+    if (
+        !arnetTimeChannelActive ||
+        !arnetTimeAudioUnlocked ||
+        !audioCtx ||
+        arnetTimeBackgroundOscillator
+    ) {
+        return;
+    }
+
+    const oscillator =
+        audioCtx.createOscillator();
+
+    const gain =
+        audioCtx.createGain();
+
+    oscillator.type =
+        "sine";
+
+    oscillator.frequency.setValueAtTime(
+        ARNET_TIME_BACKGROUND_FREQUENCY,
+        audioCtx.currentTime
+    );
+
+    gain.gain.setValueAtTime(
+        0,
+        audioCtx.currentTime
+    );
+
+    gain.gain.linearRampToValueAtTime(
+        ARNET_TIME_BACKGROUND_VOLUME,
+        audioCtx.currentTime + 0.15
+    );
+
+    oscillator.connect(
+        gain
+    );
+
+    gain.connect(
+        audioCtx.destination
+    );
+
+    oscillator.start();
+
+    arnetTimeBackgroundOscillator =
+        oscillator;
+
+    arnetTimeBackgroundGain =
+        gain;
+}
+
+function stopArNetTimeBackgroundTone() {
+    if (
+        arnetTimeBackgroundGain &&
+        audioCtx
+    ) {
+        try {
+            arnetTimeBackgroundGain.gain.cancelScheduledValues(
+                audioCtx.currentTime
+            );
+
+            arnetTimeBackgroundGain.gain.linearRampToValueAtTime(
+                0,
+                audioCtx.currentTime + 0.08
+            );
+        }
+        catch {
+            // Gain may already be disconnected.
+        }
+    }
+
+    if (
+        arnetTimeBackgroundOscillator
+    ) {
+        const oscillator =
+            arnetTimeBackgroundOscillator;
+
+        setTimeout(
+            () => {
+                try {
+                    oscillator.stop();
+                    oscillator.disconnect();
+                }
+                catch {
+                    // It may already be stopped.
+                }
+            },
+            100
+        );
+    }
+
+    if (
+        arnetTimeBackgroundGain
+    ) {
+        const gain =
+            arnetTimeBackgroundGain;
+
+        setTimeout(
+            () => {
+                try {
+                    gain.disconnect();
+                }
+                catch {
+                    // It may already be disconnected.
+                }
+            },
+            120
+        );
+    }
+
+    arnetTimeBackgroundOscillator =
+        null;
+
+    arnetTimeBackgroundGain =
+        null;
+}
+
+function setArNetTimeBackgroundLevel(
+    level,
+    fadeSeconds = 0.08
+) {
+    if (
+        !arnetTimeBackgroundGain ||
+        !audioCtx
+    ) {
+        return;
+    }
+
+    const target =
+        Math.max(
+            0,
+            Number(level) || 0
+        );
+
+    const now =
+        audioCtx.currentTime;
+
+    arnetTimeBackgroundGain.gain.cancelScheduledValues(
+        now
+    );
+
+    arnetTimeBackgroundGain.gain.setValueAtTime(
+        arnetTimeBackgroundGain.gain.value,
+        now
+    );
+
+    arnetTimeBackgroundGain.gain.linearRampToValueAtTime(
+        target,
+        now + fadeSeconds
     );
 }
 
