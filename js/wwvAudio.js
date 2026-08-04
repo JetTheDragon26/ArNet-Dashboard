@@ -21,6 +21,13 @@ const ARNET_TIME_IDENT_URL =
 const ARNET_WWV_AUDIO_URL =
     "assets/time/wwv/output.mp3";
 
+/*
+ * "v" = WWV male voice
+ * "h" = WWVH female voice
+ */
+const ARNET_WWV_VOICE_PREFIX =
+    "v";
+
 const ARNET_WWV_PHRASE_GAP_MS =
     170;
 
