@@ -40,7 +40,7 @@ const ARNET_TIME_CALLSIGN =
  * to finish before the exact minute marker.
  */
 const ARNET_TIME_ANNOUNCEMENT_SECOND =
-    35;
+    28;
 
 /*
  * Second ticks.
