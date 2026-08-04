@@ -39,6 +39,9 @@ let arnetWeatherMorseSources =
 let arnetWeatherMorsePlaying =
     false;
 
+let arnetWeatherAudioUnlocked =
+    false;
+
 /*
  * Default location:
  * Wheat Ridge, Colorado
@@ -269,6 +272,24 @@ function createArNetWeatherPanel() {
             WEATHER ALERT
         </div>
 
+        <button
+    id="btnEnableWeatherAudio"
+    type="button"
+    style="
+        width:100%;
+        margin-top:7px;
+        padding:6px;
+        background:#004466;
+        border:1px solid #0088AA;
+        color:#FFFFFF;
+        font-size:10px;
+        font-weight:bold;
+        cursor:pointer;
+    "
+>
+    ENABLE WEATHER MORSE AUDIO
+</button>
+
         <div
             id="weatherServiceMessage"
             style="
@@ -320,6 +341,18 @@ function createArNetWeatherPanel() {
 
     arnetWeatherPanel =
         panel;
+
+    const enableAudioButton =
+    document.getElementById(
+        "btnEnableWeatherAudio"
+    );
+
+if (enableAudioButton) {
+    enableAudioButton.addEventListener(
+        "click",
+        enableArNetWeatherAudio
+    );
+}
 
     return panel;
 }
@@ -1024,6 +1057,79 @@ function escapeWeatherHtml(
         );
 }
 
+async function enableArNetWeatherAudio() {
+    try {
+        initAudioContext();
+
+        if (!audioCtx) {
+            throw new Error(
+                "Audio context could not be created."
+            );
+        }
+
+        if (
+            audioCtx.state ===
+                "suspended"
+        ) {
+            await audioCtx.resume();
+        }
+
+        arnetWeatherAudioUnlocked =
+            audioCtx.state ===
+            "running";
+
+        const button =
+            document.getElementById(
+                "btnEnableWeatherAudio"
+            );
+
+        if (
+            arnetWeatherAudioUnlocked
+        ) {
+            if (button) {
+                button.textContent =
+                    "WEATHER AUDIO ENABLED";
+
+                button.disabled =
+                    true;
+
+                button.style.background =
+                    "#164422";
+
+                button.style.cursor =
+                    "default";
+            }
+
+            setWeatherElementText(
+                "weatherServiceMessage",
+                "Weather Morse audio enabled."
+            );
+
+            if (
+                arnetWeatherChannelActive
+            ) {
+                await playArNetWeatherMorseIdent();
+            }
+        }
+        else {
+            throw new Error(
+                "The browser kept audio suspended."
+            );
+        }
+    }
+    catch (error) {
+        console.error(
+            "Could not enable weather audio:",
+            error
+        );
+
+        setWeatherElementText(
+            "weatherServiceMessage",
+            "Click again to allow weather audio."
+        );
+    }
+}
+
 // ======================================================
 // Weather-channel Morse identification
 // ======================================================
@@ -1036,12 +1142,13 @@ function getArNetWeatherMorseUnitSeconds() {
 }
 
 async function playArNetWeatherMorseIdent() {
-    if (
-        !arnetWeatherChannelActive ||
-        arnetWeatherMorsePlaying
-    ) {
-        return;
-    }
+   if (
+    !arnetWeatherChannelActive ||
+    arnetWeatherMorsePlaying ||
+    !arnetWeatherAudioUnlocked
+) {
+    return;
+}
 
     if (
         typeof textToMorse !==
