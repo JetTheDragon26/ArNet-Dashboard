@@ -644,7 +644,7 @@ if (timeZoneSelect) {
     label,
     id,
     defaultValue
-) {
+) 
     return `
         <div
             style="
