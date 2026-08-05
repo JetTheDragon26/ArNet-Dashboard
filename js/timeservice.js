@@ -1882,6 +1882,83 @@ function startArNetTimeBackgroundTone() {
     );
 }
 
+function updateArNetTimeBackgroundTone(
+    immediate = false
+) {
+    if (
+        !arnetTimeBackgroundOscillator ||
+        !arnetTimeBackgroundGain ||
+        !audioCtx
+    ) {
+        return;
+    }
+
+    const now =
+        getArNetTimeNow();
+
+    const frequency =
+        getArNetTimeBackgroundFrequency(
+            now
+        );
+
+    const audible =
+        shouldArNetBackgroundToneBeAudible(
+            now
+        );
+
+    const targetVolume =
+        audible
+            ? ARNET_TIME_BACKGROUND_VOLUME
+            : 0;
+
+    const audioNow =
+        audioCtx.currentTime;
+
+    const fadeDuration =
+        immediate
+            ? 0.01
+            : 0.06;
+
+    if (frequency > 0) {
+        arnetTimeBackgroundOscillator
+            .frequency
+            .cancelScheduledValues(
+                audioNow
+            );
+
+        arnetTimeBackgroundOscillator
+            .frequency
+            .setTargetAtTime(
+                frequency,
+                audioNow,
+                0.015
+            );
+    }
+
+    arnetTimeBackgroundGain
+        .gain
+        .cancelScheduledValues(
+            audioNow
+        );
+
+    arnetTimeBackgroundGain
+        .gain
+        .setValueAtTime(
+            arnetTimeBackgroundGain
+                .gain
+                .value,
+            audioNow
+        );
+
+    arnetTimeBackgroundGain
+        .gain
+        .linearRampToValueAtTime(
+            targetVolume,
+            audioNow +
+                fadeDuration
+        );
+}
+
 function stopArNetTimeBackgroundTone() {
     if (
         arnetTimeBackgroundGain &&
