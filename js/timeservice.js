@@ -640,11 +640,11 @@ if (timeZoneSelect) {
     return panel;
 }
 
- createArNetTimeStatusCell(
+function createArNetTimeStatusCell(
     label,
     id,
     defaultValue
-) 
+) {
     return `
         <div
             style="
