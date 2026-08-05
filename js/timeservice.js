@@ -1596,30 +1596,28 @@ async function startArNetTimeAnnouncement(
             error
         );
     }
-    finally {
+finally {
     updateArNetTimeBackgroundTone();
-    ARNET_TIME_BACKGROUND_VOLUME,
-    0.2
-);
 
-        if (
-            arnetTimeChannelActive
-        ) {
-            setArNetTimeText(
-                "arnetTimeServiceState",
-                "TIME LOCK"
-            );
+    if (
+        arnetTimeChannelActive
+    ) {
+        setArNetTimeText(
+            "arnetTimeServiceState",
+            "TIME LOCK"
+        );
 
-            setArNetTimeColor(
-                "arnetTimeServiceState",
-                "#00FF7F"
-            );
+        setArNetTimeColor(
+            "arnetTimeServiceState",
+            "#00FF7F"
+        );
 
-            setArNetTimeText(
-                "arnetTimeServiceMessage",
-                "Awaiting exact minute marker."
-            );
-        }
+        setArNetTimeText(
+            "arnetTimeServiceMessage",
+            "Awaiting exact minute marker."
+        );
+    }
+
     }
 }
 
