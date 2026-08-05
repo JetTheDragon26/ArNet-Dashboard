@@ -259,6 +259,11 @@ let arnetTimeBackgroundOscillator =
 let arnetTimeBackgroundGain =
     null;
 
+let arnetSelectedTimeZone =
+    localStorage.getItem(
+        "arnet-time-zone"
+    ) || "local";
+
 // ======================================================
 // Time panel
 // ======================================================
@@ -794,12 +799,12 @@ function activateArNetTimeChannel() {
         );
 
     startArNetTimeScheduler();
-}
-
+    
 if (
     arnetTimeAudioUnlocked
 ) {
     startArNetTimeBackgroundTone();
+  }
 }
 
 function deactivateArNetTimeChannel() {
