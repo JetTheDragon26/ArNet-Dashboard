@@ -360,15 +360,16 @@ function createArNetTimePanel() {
                     text-align:center;
                 "
             >
-                <div
-                    style="
-                        color:#887A44;
-                        font-size:8px;
-                        font-weight:bold;
-                    "
-                >
-                    LOCAL TIME
-                </div>
+               <div
+    id="arnetTimeSelectedZoneLabel"
+    style="
+        color:#887A44;
+        font-size:8px;
+        font-weight:bold;
+    "
+>
+    AUTOMATIC LOCAL TIME
+</div>
 
                 <div
                     id="arnetTimeLocalClock"
@@ -586,6 +587,44 @@ function createArNetTimePanel() {
     arnetTimePanel =
         panel;
 
+    const timeZoneSelect =
+    panel.querySelector(
+        "#arnetTimeZoneSelect"
+    );
+
+if (timeZoneSelect) {
+    if (
+        ARNET_TIME_ZONES[
+            arnetSelectedTimeZone
+        ]
+    ) {
+        timeZoneSelect.value =
+            arnetSelectedTimeZone;
+    }
+    else {
+        arnetSelectedTimeZone =
+            "local";
+
+        timeZoneSelect.value =
+            "local";
+    }
+
+    timeZoneSelect.addEventListener(
+        "change",
+        () => {
+            arnetSelectedTimeZone =
+                timeZoneSelect.value;
+
+            localStorage.setItem(
+                "arnet-time-zone",
+                arnetSelectedTimeZone
+            );
+
+            updateArNetTimeDisplay();
+        }
+    );
+}
+    
     const enableButton =
         panel.querySelector(
             "#btnEnableArNetTimeAudio"
@@ -601,7 +640,7 @@ function createArNetTimePanel() {
     return panel;
 }
 
-function createArNetTimeStatusCell(
+ createArNetTimeStatusCell(
     label,
     id,
     defaultValue
@@ -839,6 +878,11 @@ const displayTime =
 const now =
     networkNow;
 
+    setArNetTimeText(
+    "arnetTimeSelectedZoneLabel",
+    getArNetSelectedZoneLabel()
+);
+
  setArNetTimeText(
     "arnetTimeLocalClock",
     selectedZone.offsetMinutes ===
@@ -884,8 +928,10 @@ const now =
 );
 
     setArNetTimeText(
-        "arnetTimeLocalDate",
-        now.toLocaleDateString(
+    "arnetTimeLocalDate",
+    selectedZone.offsetMinutes ===
+        null
+        ? displayTime.toLocaleDateString(
             [],
             {
                 weekday:
@@ -901,8 +947,26 @@ const now =
                     "numeric"
             }
         )
-    );
+        : displayTime.toLocaleDateString(
+            "en-US",
+            {
+                timeZone:
+                    "UTC",
 
+                weekday:
+                    "long",
+
+                year:
+                    "numeric",
+
+                month:
+                    "long",
+
+                day:
+                    "numeric"
+            }
+        )
+);
     setArNetTimeText(
         "arnetTimeUtcClock",
         createArNetUtcClockText(
@@ -949,6 +1013,16 @@ const now =
             now
         )
     );
+
+    setArNetTimeText(
+    "arnetTimeClockSource",
+    typeof arnetServerClockSynchronized !==
+        "undefined" &&
+    arnetServerClockSynchronized
+        ? "ARNET NETWORK"
+        : "DEVICE CLOCK"
+);
+    
 }
 
 function createArNetUtcClockText(
@@ -980,6 +1054,95 @@ function createArNetUtcClockText(
 
     return (
         `${hours}:${minutes}:${seconds} UTC`
+    );
+}
+
+function getArNetSelectedZoneDate(
+    networkDate
+) {
+    const zone =
+        ARNET_TIME_ZONES[
+            arnetSelectedTimeZone
+        ] ||
+        ARNET_TIME_ZONES.local;
+
+    if (
+        zone.offsetMinutes ===
+            null
+    ) {
+        return new Date(
+            networkDate.getTime()
+        );
+    }
+
+    return new Date(
+        networkDate.getTime() +
+        zone.offsetMinutes *
+            60 *
+            1000
+    );
+}
+
+function getArNetSelectedZoneLabel() {
+    const zone =
+        ARNET_TIME_ZONES[
+            arnetSelectedTimeZone
+        ] ||
+        ARNET_TIME_ZONES.local;
+
+    if (
+        zone.offsetMinutes ===
+            null
+    ) {
+        return zone.label;
+    }
+
+    const offset =
+        formatArNetTimeZoneOffset(
+            zone.offsetMinutes
+        );
+
+    return (
+        zone.label +
+        " · " +
+        offset
+    );
+}
+
+function formatArNetTimeZoneOffset(
+    offsetMinutes
+) {
+    const sign =
+        offsetMinutes >= 0
+            ? "+"
+            : "-";
+
+    const absoluteMinutes =
+        Math.abs(
+            offsetMinutes
+        );
+
+    const hours =
+        Math.floor(
+            absoluteMinutes /
+            60
+        );
+
+    const minutes =
+        absoluteMinutes %
+        60;
+
+    return (
+        "GMT" +
+        sign +
+        hours +
+        ":" +
+        String(
+            minutes
+        ).padStart(
+            2,
+            "0"
+        )
     );
 }
 
