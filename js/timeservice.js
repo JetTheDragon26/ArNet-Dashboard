@@ -66,11 +66,33 @@ const ARNET_TIME_MINUTE_DURATION =
 const ARNET_TIME_MINUTE_VOLUME =
     0.24;
 
-const ARNET_TIME_BACKGROUND_FREQUENCY =
-    500;
+const ARNET_TIME_BACKGROUND_DUCKED_VOLUME =
+    0.009;
 
 const ARNET_TIME_BACKGROUND_VOLUME =
     0.045;
+
+/*
+ * WWV-style male-station tone schedule.
+ *
+ * Values:
+ * 0   = no background tone
+ * 440 = reference tone
+ * 500 = reference tone
+ * 600 = reference tone
+ *
+ * ANITS uses its own ident, so WWV "ident" minutes are
+ * represented here as silent background-tone minutes.
+ */
+const ARNET_TIME_BACKGROUND_SCHEDULE = [
+    0,   600, 440, 600, 500, 600, 500, 600, 500, 600,
+    500, 600, 500, 600, 500, 600, 500, 600, 500, 600,
+    500, 600, 500, 600, 500, 600, 500, 600, 500, 0,
+
+    0,   600, 500, 600, 500, 600, 500, 600, 500, 600,
+    500, 600, 500, 0,   0,   0,   0,   0,   0,   0,
+    0,   0,   0,   600, 500, 600, 500, 600, 500, 0
+];
 
 /*
  * At the beginning of an hour, use a slightly higher
@@ -1357,6 +1379,8 @@ function processArNetTimeScheduler() {
     arnetTimeLastHandledSecond =
         currentSecond;
 
+    updateArNetTimeBackgroundTone();
+    
     const minuteKey =
         createArNetMinuteKey(
             now
@@ -1488,6 +1512,11 @@ async function startArNetTimeAnnouncement(
         return;
     }
 
+    setArNetTimeBackgroundLevel(
+    0,
+    0.08
+    );
+
     /*
      * Announce the upcoming UTC minute.
      */
@@ -1568,7 +1597,7 @@ async function startArNetTimeAnnouncement(
         );
     }
     finally {
-        setArNetTimeBackgroundLevel(
+    updateArNetTimeBackgroundTone();
     ARNET_TIME_BACKGROUND_VOLUME,
     0.2
 );
@@ -1653,6 +1682,13 @@ function playArNetMinuteMarker(
         return;
     }
 
+    setTimeout(
+    () => {
+        updateArNetTimeBackgroundTone();
+    },
+    850
+);
+
     const topOfHour =
         now.getUTCMinutes() ===
             0;
@@ -1718,6 +1754,74 @@ function playArNetMinuteMarker(
     );
 }
 
+function getArNetTimeBackgroundFrequency(
+    date = getArNetTimeNow()
+) {
+    const minute =
+        date.getUTCMinutes();
+
+    const scheduledFrequency =
+        ARNET_TIME_BACKGROUND_SCHEDULE[
+            minute
+        ];
+
+    /*
+     * The original simulator avoids using the special
+     * hourly 440 Hz tone during hour 00.
+     */
+    if (
+        date.getUTCHours() === 0 &&
+        scheduledFrequency === 440
+    ) {
+        return 500;
+    }
+
+    return scheduledFrequency || 0;
+}
+
+function getArNetTimeNow() {
+    if (
+        typeof getArNetNetworkTime ===
+            "function"
+    ) {
+        return getArNetNetworkTime();
+    }
+
+    return new Date();
+}
+
+function shouldArNetBackgroundToneBeAudible(
+    date = getArNetTimeNow()
+) {
+    const second =
+        date.getUTCSeconds();
+
+    const frequency =
+        getArNetTimeBackgroundFrequency(
+            date
+        );
+
+    if (frequency === 0) {
+        return false;
+    }
+
+    /*
+     * WWV removes the base tone late in the minute so
+     * the spoken time announcement remains clear.
+     *
+     * Our longer ANITS ident begins at second 28, so we
+     * also suppress it while the voice sequence plays.
+     */
+    if (
+        second >= 44 ||
+        isArNetTimeVoicePlaying()
+    ) {
+        return false;
+    }
+
+    return true;
+}
+
 // ======================================================
 // Continuous background tone
 // ======================================================
@@ -1738,22 +1842,25 @@ function startArNetTimeBackgroundTone() {
     const gain =
         audioCtx.createGain();
 
+    const now =
+        getArNetTimeNow();
+
+    const frequency =
+        getArNetTimeBackgroundFrequency(
+            now
+        );
+
     oscillator.type =
         "sine";
 
     oscillator.frequency.setValueAtTime(
-        ARNET_TIME_BACKGROUND_FREQUENCY,
+        frequency || 500,
         audioCtx.currentTime
     );
 
     gain.gain.setValueAtTime(
         0,
         audioCtx.currentTime
-    );
-
-    gain.gain.linearRampToValueAtTime(
-        ARNET_TIME_BACKGROUND_VOLUME,
-        audioCtx.currentTime + 0.15
     );
 
     oscillator.connect(
@@ -1771,6 +1878,10 @@ function startArNetTimeBackgroundTone() {
 
     arnetTimeBackgroundGain =
         gain;
+
+    updateArNetTimeBackgroundTone(
+        true
+    );
 }
 
 function stopArNetTimeBackgroundTone() {
