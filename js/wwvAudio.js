@@ -724,20 +724,26 @@ async function playFullTimeStationAnnouncement(
     startArNetWWVMeterTracking();
 
     try {
-        await playTimeStationIdent(
-            {
-                sequenceNumber,
-                volume:
-                    options.identVolume ??
-                    1
-            }
-        );
+        const includeIdent =
+    options.includeIdent !==
+        false;
 
-        await waitForArNetWWVAudio(
-            options.identGapMs ??
-                ARNET_WWV_IDENT_GAP_MS,
-            sequenceNumber
-        );
+if (includeIdent) {
+    await playTimeStationIdent(
+        {
+            sequenceNumber,
+            volume:
+                options.identVolume ??
+                1
+        }
+    );
+
+    await waitForArNetWWVAudio(
+        options.identGapMs ??
+            ARNET_WWV_IDENT_GAP_MS,
+        sequenceNumber
+    );
+}
 
         await playWWVAnnouncement(
             hour,
