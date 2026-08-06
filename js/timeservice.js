@@ -16,6 +16,7 @@
 // - display.js
 // - wwvSpriteData.js
 // - wwvAudio.js
+// - morse.js
 // ======================================================
 
 const ARNET_TIME_FREQUENCY =
@@ -93,6 +94,27 @@ const ARNET_TIME_BACKGROUND_SCHEDULE = [
     500, 600, 500, 0,   0,   0,   0,   0,   0,   0,
     0,   0,   0,   600, 500, 600, 500, 600, 500, 0
 ];
+
+const ARNET_TIME_VOICE_IDENT_INTERVAL_MINUTES =
+    3;
+
+const ARNET_TIME_MORSE_IDENT_INTERVAL_MINUTES =
+    5;
+
+const ARNET_TIME_MORSE_IDENT_SECOND =
+    5;
+
+const ARNET_TIME_MORSE_IDENT_TEXT =
+    "UBA-TS-001, UBA-TS-001, ANITS UBA-TS-001";
+
+const ARNET_TIME_MORSE_FREQUENCY =
+    700;
+
+const ARNET_TIME_MORSE_WPM =
+    20;
+
+const ARNET_TIME_MORSE_VOLUME =
+    0.16;
 
 /*
  * At the beginning of an hour, use a slightly higher
@@ -285,6 +307,18 @@ let arnetSelectedTimeZone =
     localStorage.getItem(
         "arnet-time-zone"
     ) || "local";
+
+let arnetTimeMorseActive =
+    false;
+
+let arnetTimeLastMorseMinute =
+    "";
+
+let arnetTimeMorseSources =
+    new Set();
+
+let arnetTimeMorseTimers =
+    new Set();
 
 // ======================================================
 // Time panel
@@ -857,6 +891,8 @@ function deactivateArNetTimeChannel() {
 
     stopArNetTimeScheduler();
 
+    stopArNetTimeMorse();
+
     stopArNetTimeBackgroundTone();
 
     stopArNetTimeTones();
@@ -1380,6 +1416,28 @@ function processArNetTimeScheduler() {
         currentSecond;
 
     updateArNetTimeBackgroundTone();
+
+    const morseMinuteKey =
+    createArNetMinuteKey(
+        now
+    );
+
+if (
+    currentSecond ===
+        ARNET_TIME_MORSE_IDENT_SECOND &&
+    now.getUTCMinutes() %
+        ARNET_TIME_MORSE_IDENT_INTERVAL_MINUTES ===
+        0 &&
+    arnetTimeLastMorseMinute !==
+        morseMinuteKey
+) {
+    arnetTimeLastMorseMinute =
+        morseMinuteKey;
+
+    playArNetTimeMorseIdent();
+
+    return;
+}
     
     const minuteKey =
         createArNetMinuteKey(
@@ -1446,10 +1504,11 @@ function processArNetTimeScheduler() {
      * announcement.
      */
     if (
-        isArNetTimeVoicePlaying()
-    ) {
-        return;
-    }
+    isArNetTimeVoicePlaying() ||
+    arnetTimeMorseActive
+) {
+    return;
+}
 
     /*
      * WWV-style omitted ticks.
@@ -1577,17 +1636,25 @@ async function startArNetTimeAnnouncement(
     0.12
 );
 
+const includeVoiceIdent =
+    currentTime.getUTCMinutes() %
+        ARNET_TIME_VOICE_IDENT_INTERVAL_MINUTES ===
+        0;
+    
     try {
         await playFullTimeStationAnnouncement(
             announcedHour,
             announcedMinute,
-            {
-                identGapMs:
-                    280,
+           {
+    includeIdent:
+        includeVoiceIdent,
 
-                phraseGapMs:
-                    170
-            }
+    identGapMs:
+        280,
+
+    phraseGapMs:
+        170
+}
         );
     }
     catch (error) {
@@ -1626,6 +1693,394 @@ function isArNetTimeVoicePlaying() {
         typeof arnetWWVSequenceActive !==
             "undefined" &&
         arnetWWVSequenceActive
+    );
+}
+
+// ======================================================
+// ANITS Morse identification
+// ======================================================
+
+async function playArNetTimeMorseIdent() {
+    if (
+        !arnetTimeChannelActive ||
+        !arnetTimeAudioUnlocked ||
+        !audioCtx ||
+        arnetTimeMorseActive
+    ) {
+        return;
+    }
+
+    arnetTimeMorseActive =
+        true;
+
+    setArNetTimeBackgroundLevel(
+        0,
+        0.06
+    );
+
+    setArNetTimeText(
+        "arnetTimeServiceState",
+        "MORSE IDENT"
+    );
+
+    setArNetTimeColor(
+        "arnetTimeServiceState",
+        "#00FFFF"
+    );
+
+    setArNetTimeText(
+        "arnetTimeServiceMessage",
+        ARNET_TIME_MORSE_IDENT_TEXT
+    );
+
+    try {
+        const morse =
+            textToMorse(
+                ARNET_TIME_MORSE_IDENT_TEXT
+            );
+
+        await scheduleArNetTimeMorse(
+            morse
+        );
+
+        if (
+            typeof displayDecodedMorse ===
+                "function"
+        ) {
+            displayDecodedMorse(
+                ARNET_TIME_MORSE_IDENT_TEXT,
+                {
+                    sender:
+                        ARNET_TIME_CALLSIGN,
+
+                    frequency:
+                        ARNET_TIME_FREQUENCY,
+
+                    kind:
+                        "ANITS AUTOMATED IDENT"
+                }
+            );
+        }
+    }
+    catch (error) {
+        console.error(
+            "[ANITS Time] Morse ident failed:",
+            error
+        );
+    }
+    finally {
+        arnetTimeMorseActive =
+            false;
+
+        updateArNetTimeBackgroundTone();
+
+        if (
+            arnetTimeChannelActive
+        ) {
+            setArNetTimeText(
+                "arnetTimeServiceState",
+                "TIME LOCK"
+            );
+
+            setArNetTimeColor(
+                "arnetTimeServiceState",
+                "#00FF7F"
+            );
+
+            setArNetTimeText(
+                "arnetTimeServiceMessage",
+                "ANITS time signal synchronized."
+            );
+        }
+    }
+}
+
+function stopArNetTimeMorse() {
+    for (
+        const timer of
+        arnetTimeMorseTimers
+    ) {
+        clearTimeout(
+            timer
+        );
+    }
+
+    arnetTimeMorseTimers.clear();
+
+    for (
+        const source of
+        arnetTimeMorseSources
+    ) {
+        try {
+            source.stop();
+        }
+        catch {
+            // Source may already have stopped.
+        }
+    }
+
+    arnetTimeMorseSources.clear();
+
+    arnetTimeMorseActive =
+        false;
+}
+
+function scheduleArNetTimeMorse(
+    morse
+) {
+    return new Promise(
+        resolve => {
+            /*
+             * PARIS timing:
+             * dot length in milliseconds = 1200 / WPM
+             */
+            const dotMilliseconds =
+                1200 /
+                ARNET_TIME_MORSE_WPM;
+
+            const dashMilliseconds =
+                dotMilliseconds *
+                3;
+
+            const symbolGapMilliseconds =
+                dotMilliseconds;
+
+            const letterGapMilliseconds =
+                dotMilliseconds *
+                3;
+
+            const wordGapMilliseconds =
+                dotMilliseconds *
+                7;
+
+            let delayMilliseconds =
+                0;
+
+            const characters =
+                String(morse)
+                    .trim()
+                    .split("");
+
+            for (
+                let index = 0;
+                index < characters.length;
+                index++
+            ) {
+                const symbol =
+                    characters[index];
+
+                if (
+                    symbol === "." ||
+                    symbol === "-"
+                ) {
+                    const duration =
+                        symbol === "."
+                            ? dotMilliseconds
+                            : dashMilliseconds;
+
+                    scheduleArNetMorseTone(
+                        delayMilliseconds,
+                        duration
+                    );
+
+                    delayMilliseconds +=
+                        duration +
+                        symbolGapMilliseconds;
+
+                    continue;
+                }
+
+                if (symbol === " ") {
+                    /*
+                     * textToMorse() uses ordinary spacing
+                     * between symbols/letters and produces
+                     * wider spacing around word boundaries.
+                     */
+                    const nextCharacter =
+                        characters[
+                            index + 1
+                        ];
+
+                    if (
+                        nextCharacter === " "
+                    ) {
+                        delayMilliseconds +=
+                            wordGapMilliseconds;
+
+                        while (
+                            characters[
+                                index + 1
+                            ] === " "
+                        ) {
+                            index++;
+                        }
+                    }
+                    else {
+                        delayMilliseconds +=
+                            letterGapMilliseconds;
+                    }
+                }
+            }
+
+            const finishTimer =
+                setTimeout(
+                    () => {
+                        arnetTimeMorseTimers.delete(
+                            finishTimer
+                        );
+
+                        resolve();
+                    },
+                    delayMilliseconds +
+                        100
+                );
+
+            arnetTimeMorseTimers.add(
+                finishTimer
+            );
+        }
+    );
+}
+
+function scheduleArNetMorseTone(
+    delayMilliseconds,
+    durationMilliseconds
+) {
+    const timer =
+        setTimeout(
+            () => {
+                arnetTimeMorseTimers.delete(
+                    timer
+                );
+
+                if (
+                    !arnetTimeChannelActive ||
+                    !arnetTimeAudioUnlocked ||
+                    !audioCtx
+                ) {
+                    return;
+                }
+
+                const oscillator =
+                    audioCtx.createOscillator();
+
+                const gain =
+                    audioCtx.createGain();
+
+                const start =
+                    audioCtx.currentTime +
+                    0.004;
+
+                const durationSeconds =
+                    durationMilliseconds /
+                    1000;
+
+                oscillator.type =
+                    "sine";
+
+                oscillator.frequency.setValueAtTime(
+                    ARNET_TIME_MORSE_FREQUENCY,
+                    start
+                );
+
+                gain.gain.setValueAtTime(
+                    0,
+                    start
+                );
+
+                gain.gain.linearRampToValueAtTime(
+                    ARNET_TIME_MORSE_VOLUME,
+                    start +
+                        0.004
+                );
+
+                gain.gain.setValueAtTime(
+                    ARNET_TIME_MORSE_VOLUME,
+                    Math.max(
+                        start +
+                            0.004,
+                        start +
+                            durationSeconds -
+                            0.006
+                    )
+                );
+
+                gain.gain.linearRampToValueAtTime(
+                    0,
+                    start +
+                        durationSeconds
+                );
+
+                oscillator.connect(
+                    gain
+                );
+
+                gain.connect(
+                    audioCtx.destination
+                );
+
+                oscillator.start(
+                    start
+                );
+
+                oscillator.stop(
+                    start +
+                        durationSeconds +
+                        0.01
+                );
+
+                arnetTimeMorseSources.add(
+                    oscillator
+                );
+
+                serviceAudioAmplitude =
+                    0.72;
+
+                if (
+                    txtTxState &&
+                    boxTxState
+                ) {
+                    txtTxState.textContent =
+                        "TIME";
+
+                    boxTxState.style.background =
+                        "#665500";
+                }
+
+                oscillator.addEventListener(
+                    "ended",
+                    () => {
+                        arnetTimeMorseSources.delete(
+                            oscillator
+                        );
+
+                        if (
+                            arnetTimeMorseSources.size ===
+                                0 &&
+                            !isArNetTimeVoicePlaying()
+                        ) {
+                            serviceAudioAmplitude =
+                                0;
+                        }
+
+                        try {
+                            oscillator.disconnect();
+                            gain.disconnect();
+                        }
+                        catch {
+                            // Nodes may already be disconnected.
+                        }
+                    },
+                    {
+                        once: true
+                    }
+                );
+            },
+            delayMilliseconds
+        );
+
+    arnetTimeMorseTimers.add(
+        timer
     );
 }
 
