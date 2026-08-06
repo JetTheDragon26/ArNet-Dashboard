@@ -190,25 +190,42 @@ function connectArNetNetwork() {
     );
 
     networkSocket.addEventListener(
-        "close",
-        event => {
-            networkConnected =
-                false;
+    "close",
+    event => {
+        console.warn(
+            "[ArNet Network] Socket closed:",
+            {
+                code:
+                    event.code,
 
-            networkBusy =
-                false;
+                reason:
+                    event.reason,
 
-            networkSocket =
-                null;
+                clean:
+                    event.wasClean
+            }
+        );
 
-            setNetworkStatus(
-                event.code === 1012
-                    ? "ArNet relay is restarting."
-                    : "Disconnected from ArNet relay.",
-                "#FFAA00"
-            );
-        }
-    );
+        networkConnected =
+            false;
+
+        networkBusy =
+            false;
+
+        networkSocket =
+            null;
+
+        setNetworkStatus(
+            event.code === 1012
+                ? "ArNet relay is restarting."
+                : (
+                    "Disconnected from ArNet relay " +
+                    `(${event.code}).`
+                ),
+            "#FFAA00"
+        );
+    }
+);
 
     networkSocket.addEventListener(
         "error",
