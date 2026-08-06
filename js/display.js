@@ -3,6 +3,306 @@
 // Meter, Spectrum, and Waterfall Display
 // ======================================================
 
+const ARNET_WATERFALL_BAND_RANGES = {
+    "UBA 2": {
+        min: 1800,
+        max: 3049
+    },
+
+    "ALFRS": {
+        min: 3055,
+        max: 4455
+    },
+
+    "SOLIDBAND": {
+        min: 4550,
+        max: 6000
+    },
+
+    "AHFRS 1 (LOW)": {
+        min: 6500,
+        max: 7499
+    },
+
+    "AHFRS 1 (HIGH)": {
+        min: 7500,
+        max: 7999
+    },
+
+    "AHFRS 2": {
+        min: 8000,
+        max: 8300
+    },
+
+    "ATF 1": {
+        min: 8340,
+        max: 9120
+    }
+};
+
+function getCurrentWaterfallBandRange() {
+    const bandName =
+        String(
+            comboBand?.value ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const configuredRange =
+        ARNET_WATERFALL_BAND_RANGES[
+            bandName
+        ];
+
+    if (configuredRange) {
+        return configuredRange;
+    }
+
+    const frequency =
+        Number.parseInt(
+            txtFrequency?.value,
+            10
+        ) ||
+        0;
+
+    return {
+        min:
+            Math.max(
+                0,
+                frequency -
+                    100
+            ),
+
+        max:
+            frequency +
+                100
+    };
+}
+
+function frequencyToWaterfallX(
+    frequency,
+    width
+) {
+    const range =
+        getCurrentWaterfallBandRange();
+
+    const span =
+        range.max -
+        range.min;
+
+    if (
+        !Number.isFinite(
+            frequency
+        ) ||
+        span <= 0
+    ) {
+        return width /
+            2;
+    }
+
+    const normalized =
+        (
+            frequency -
+            range.min
+        ) /
+        span;
+
+    return Math.max(
+        0,
+        Math.min(
+            width -
+                1,
+            normalized *
+                (
+                    width -
+                    1
+                )
+        )
+    );
+}
+
+function isFrequencyInsideWaterfallBand(
+    frequency
+) {
+    const range =
+        getCurrentWaterfallBandRange();
+
+    return (
+        Number.isFinite(
+            frequency
+        ) &&
+        frequency >=
+            range.min &&
+        frequency <=
+            range.max
+    );
+}
+
+function getNetworkSignalIntensity(
+    signal,
+    x,
+    signalX
+) {
+    const kind =
+        String(
+            signal.transmissionKind ||
+            "audio"
+        ).toLowerCase();
+
+    const baseStrength =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                Number(
+                    signal.strength
+                ) ||
+                0.5
+            )
+        );
+
+    let width =
+        Math.max(
+            1.5,
+            Number(
+                signal.width
+            ) ||
+            5
+        );
+
+    let modulation =
+        1;
+
+    switch (kind) {
+        case "morse":
+            width =
+                Math.max(
+                    1.5,
+                    width *
+                        0.45
+                );
+
+            modulation =
+                Math.random() >
+                    0.42
+                    ? 1
+                    : 0.12;
+            break;
+
+        case "voice":
+        case "audio":
+            modulation =
+                0.48 +
+                Math.random() *
+                    0.52;
+            break;
+
+        case "music":
+            width =
+                Math.max(
+                    width,
+                    9
+                );
+
+            modulation =
+                0.72 +
+                Math.random() *
+                    0.28;
+            break;
+
+        case "photo":
+            width =
+                Math.max(
+                    width,
+                    10
+                );
+
+            modulation =
+                (
+                    Math.floor(
+                        Date.now() /
+                        140
+                    ) %
+                    2
+                )
+                    ? 0.9
+                    : 0.48;
+            break;
+
+        case "video":
+            width =
+                Math.max(
+                    width,
+                    16
+                );
+
+            modulation =
+                0.78 +
+                (
+                    Math.sin(
+                        Date.now() /
+                        70 +
+                        x *
+                        0.7
+                    ) *
+                    0.16
+                );
+            break;
+
+        case "ident":
+            width =
+                Math.max(
+                    2,
+                    width *
+                        0.6
+                );
+
+            modulation =
+                0.65 +
+                Math.random() *
+                    0.35;
+            break;
+
+        default:
+            modulation =
+                0.6 +
+                Math.random() *
+                    0.4;
+            break;
+    }
+
+    const distance =
+        Math.abs(
+            x -
+            signalX
+        );
+
+    if (
+        distance >
+        width
+    ) {
+        return 0;
+    }
+
+    const shape =
+        Math.cos(
+            (
+                distance /
+                width
+            ) *
+            (
+                Math.PI /
+                2
+            )
+        );
+
+    return (
+        baseStrength *
+        modulation *
+        shape
+    );
+}
+
 /**
  * Calculates the RMS level of the current PCM playback
  * around a specific elapsed time.
@@ -682,14 +982,39 @@ function drawWaterfallRow(
     const pixels =
         wfPixelData.data;
 
-    const carrierX =
-        wfWidth * 0.25;
+    const now =
+        Date.now();
 
-    const audioX =
-        wfWidth * 0.5;
+    /*
+     * Ignore old spectrum data if the relay has not sent
+     * an update recently.
+     */
+    const spectrumIsFresh =
+        typeof networkSpectrumLastUpdate ===
+            "number" &&
+        now -
+            networkSpectrumLastUpdate <
+            3000;
 
-    const videoX =
-        wfWidth * 0.75;
+    const activeSignals =
+        spectrumIsFresh &&
+        Array.isArray(
+            networkSpectrumSignals
+        )
+            ? networkSpectrumSignals
+            : [];
+
+    const tunedFrequency =
+        Number.parseInt(
+            txtFrequency?.value,
+            10
+        );
+
+    const tunedX =
+        frequencyToWaterfallX(
+            tunedFrequency,
+            wfWidth
+        );
 
     for (
         let x = 0;
@@ -697,86 +1022,110 @@ function drawWaterfallRow(
         x++
     ) {
         const noise =
-            Math.random() * 0.04;
+            Math.random() *
+            0.035;
 
-        const carrierBar =
-            (
-                isTransmitting &&
+        let networkIntensity =
+            0;
+
+        for (
+            const signal of
+            activeSignals
+        ) {
+            if (
+                !isFrequencyInsideWaterfallBand(
+                    signal.frequency
+                )
+            ) {
+                continue;
+            }
+
+            const signalX =
+                frequencyToWaterfallX(
+                    signal.frequency,
+                    wfWidth
+                );
+
+            networkIntensity +=
+                getNetworkSignalIntensity(
+                    signal,
+                    x,
+                    signalX
+                );
+        }
+
+        /*
+         * Show this dashboard's own local TX/audio activity
+         * even before the relay snapshot comes back.
+         */
+        let localSignal =
+            0;
+
+        if (
+            isTransmitting &&
+            Number.isFinite(
+                tunedFrequency
+            )
+        ) {
+            const distance =
                 Math.abs(
                     x -
-                    carrierX
-                ) < 2.5
-            )
-                ? 0.85
-                : 0;
+                    tunedX
+                );
 
-        const audioDistance =
-            Math.abs(
-                x -
-                audioX
-            );
+            const localWidth =
+                isAbmtvMode
+                    ? 14
+                    : 5;
 
-        const audioSignal =
-            audioDistance < 25
-                ? (
+            if (
+                distance <
+                localWidth
+            ) {
+                localSignal =
                     amplitude *
-                    1.2
-                ) *
                     Math.cos(
                         (
-                            audioDistance /
-                            25
+                            distance /
+                            localWidth
                         ) *
                         (
                             Math.PI /
                             2
                         )
-                    )
-                : 0;
+                    );
+            }
+        }
 
-        const videoDistance =
+        /*
+         * Faint tuned-frequency marker. This is deliberately
+         * weaker than a real transmission.
+         */
+        const tunedMarker =
             Math.abs(
                 x -
-                videoX
-            );
-
-        const videoSignal =
-            (
-                isAbmtvMode &&
-                isTransmitting &&
-                videoDistance < 35
-            )
-                ? (
-                    amplitude *
-                    1.5
-                ) *
-                    Math.cos(
-                        (
-                            videoDistance /
-                            35
-                        ) *
-                        (
-                            Math.PI /
-                            2
-                        )
-                    )
+                tunedX
+            ) <
+            0.8
+                ? 0.09
                 : 0;
 
         const totalIntensity =
             Math.min(
                 1,
                 noise +
-                carrierBar +
-                audioSignal +
-                videoSignal
+                networkIntensity +
+                localSignal +
+                tunedMarker
             );
 
         const blue =
-            totalIntensity > 0.08
+            totalIntensity >
+                0.05
                 ? Math.min(
                     255,
                     totalIntensity *
-                    180
+                        190
                 )
                 : 0;
 
@@ -787,10 +1136,10 @@ function drawWaterfallRow(
                     0,
                     (
                         totalIntensity -
-                        0.1
+                        0.08
                     ) *
                     255 *
-                    2.2
+                    2.25
                 )
             );
 
@@ -801,26 +1150,38 @@ function drawWaterfallRow(
                     0,
                     (
                         totalIntensity -
-                        0.35
+                        0.32
                     ) *
                     255 *
-                    2.8
+                    2.9
                 )
             );
 
         const pixelIndex =
-            x * 4;
+            x *
+            4;
 
-        pixels[pixelIndex] =
+        pixels[
+            pixelIndex
+        ] =
             red;
 
-        pixels[pixelIndex + 1] =
+        pixels[
+            pixelIndex +
+            1
+        ] =
             green;
 
-        pixels[pixelIndex + 2] =
+        pixels[
+            pixelIndex +
+            2
+        ] =
             blue;
 
-        pixels[pixelIndex + 3] =
+        pixels[
+            pixelIndex +
+            3
+        ] =
             255;
     }
 }
