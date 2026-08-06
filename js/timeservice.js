@@ -1305,6 +1305,10 @@ async function enableArNetTimeAudio() {
 
        startArNetTimeBackgroundTone();
 
+       updateArNetTimeBackgroundTone(
+    true
+);
+
         const button =
             document.getElementById(
                 "btnEnableArNetTimeAudio"
@@ -1571,10 +1575,11 @@ async function startArNetTimeAnnouncement(
         return;
     }
 
-    setArNetTimeBackgroundLevel(
-    0,
-    0.08
-    );
+   setArNetTimeBackgroundLevel(
+    ARNET_TIME_BACKGROUND_VOLUME *
+        0.35,
+    0.06
+);
 
     /*
      * Announce the upcoming UTC minute.
@@ -1631,9 +1636,10 @@ async function startArNetTimeAnnouncement(
         )
     );
 
-        setArNetTimeBackgroundLevel(
-    0.012,
-    0.12
+ setArNetTimeBackgroundLevel(
+    ARNET_TIME_BACKGROUND_VOLUME *
+        0.35,
+    0.06
 );
 
 const includeVoiceIdent =
@@ -2219,19 +2225,30 @@ function getArNetTimeBackgroundFrequency(
         ];
 
     /*
-     * The original simulator avoids using the special
-     * hourly 440 Hz tone during hour 00.
+     * Keep the special 440 Hz reference tone,
+     * but replace WWV's silent minutes with an
+     * alternating 500/600 Hz ANITS tone.
      */
-    if (
-        date.getUTCHours() === 0 &&
-        scheduledFrequency === 440
-    ) {
-        return 500;
+    if (scheduledFrequency === 440) {
+        return date.getUTCHours() === 0
+            ? 500
+            : 440;
     }
 
-    return scheduledFrequency || 0;
-}
+    if (
+        scheduledFrequency === 500 ||
+        scheduledFrequency === 600
+    ) {
+        return scheduledFrequency;
+    }
 
+    /*
+     * ANITS fallback for WWV silent/ident minutes.
+     */
+    return minute % 2 === 0
+        ? 500
+        : 600;
+}
 function getArNetTimeNow() {
     if (
         typeof getArNetNetworkTime ===
@@ -2246,33 +2263,10 @@ function getArNetTimeNow() {
 function shouldArNetBackgroundToneBeAudible(
     date = getArNetTimeNow()
 ) {
-    const second =
-        date.getUTCSeconds();
-
-    const frequency =
-        getArNetTimeBackgroundFrequency(
-            date
-        );
-
-    if (frequency === 0) {
-        return false;
-    }
-
-    /*
-     * WWV removes the base tone late in the minute so
-     * the spoken time announcement remains clear.
-     *
-     * Our longer ANITS ident begins at second 28, so we
-     * also suppress it while the voice sequence plays.
-     */
-    if (
-        second >= 44 ||
-        isArNetTimeVoicePlaying()
-    ) {
-        return false;
-    }
-
-    return true;
+    return (
+        arnetTimeChannelActive &&
+        arnetTimeAudioUnlocked
+    );
 }
 
 // ======================================================
@@ -2361,10 +2355,25 @@ function updateArNetTimeBackgroundTone(
             now
         );
 
-    const targetVolume =
-        audible
-            ? ARNET_TIME_BACKGROUND_VOLUME
-            : 0;
+   let targetVolume =
+    audible
+        ? ARNET_TIME_BACKGROUND_VOLUME
+        : 0;
+
+if (
+    isArNetTimeVoicePlaying()
+) {
+    targetVolume =
+        ARNET_TIME_BACKGROUND_VOLUME *
+        0.18;
+}
+else if (
+    arnetTimeMorseActive
+) {
+    targetVolume =
+        ARNET_TIME_BACKGROUND_VOLUME *
+        0.35;
+}
 
     const audioNow =
         audioCtx.currentTime;
