@@ -3,6 +3,16 @@
 // WebSocket Networking and AMMEF Transport
 // ======================================================
 
+/*
+ * Active transmissions across the currently selected
+ * ArNet band, supplied by the relay.
+ */
+let networkSpectrumSignals =
+    [];
+
+let networkSpectrumLastUpdate =
+    0;
+
 // ======================================================
 // Status helpers
 // ======================================================
@@ -205,6 +215,12 @@ function connectArNetNetwork() {
                     event.wasClean
             }
         );
+
+        networkSpectrumSignals =
+     [];
+
+       networkSpectrumLastUpdate =
+        0;
 
         networkConnected =
             false;
@@ -860,6 +876,129 @@ async function handleNetworkMessage(
     switch (
         message.type
     ) {
+
+        case "spectrum-activity": {
+    const incomingMode =
+        String(
+            message.mode ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const incomingBand =
+        String(
+            message.band ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const currentMode =
+        String(
+            comboMode?.value ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    const currentBand =
+        String(
+            comboBand?.value ||
+            ""
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        incomingMode !==
+            currentMode ||
+        incomingBand !==
+            currentBand
+    ) {
+        break;
+    }
+
+    networkSpectrumSignals =
+        Array.isArray(
+            message.signals
+        )
+            ? message.signals
+                .map(
+                    signal => ({
+                        frequency:
+                            Number(
+                                signal.frequency
+                            ),
+
+                        callsign:
+                            String(
+                                signal.callsign ||
+                                "UNKNOWN"
+                            ),
+
+                        transmissionKind:
+                            String(
+                                signal.transmissionKind ||
+                                "audio"
+                            )
+                                .trim()
+                                .toLowerCase(),
+
+                        strength:
+                            Math.max(
+                                0,
+                                Math.min(
+                                    1,
+                                    Number(
+                                        signal.strength
+                                    ) ||
+                                    0.5
+                                )
+                            ),
+
+                        width:
+                            Math.max(
+                                1,
+                                Math.min(
+                                    30,
+                                    Number(
+                                        signal.width
+                                    ) ||
+                                    5
+                                )
+                            ),
+
+                        startedAt:
+                            Number(
+                                signal.startedAt
+                            ) ||
+                            Date.now(),
+
+                        expiresAt:
+                            Number(
+                                signal.expiresAt
+                            ) ||
+                            (
+                                Date.now() +
+                                30000
+                            )
+                    })
+                )
+                .filter(
+                    signal =>
+                        Number.isFinite(
+                            signal.frequency
+                        )
+                )
+            : [];
+
+    networkSpectrumLastUpdate =
+        Date.now();
+
+    break;
+}
+            
         case "welcome":
             networkStationId =
                 message.stationId ||
