@@ -93,6 +93,41 @@ function getArNetChannelNumber(
     );
 }
 
+function getArNetSignedFrequencyOffset(
+    transmittedFrequency
+) {
+    const transmitter =
+        Number.parseFloat(
+            transmittedFrequency
+        );
+
+    const receiver =
+        getNetworkFrequency();
+
+    if (
+        !Number.isFinite(transmitter) ||
+        !Number.isFinite(receiver)
+    ) {
+        return 0;
+    }
+
+    if (
+        getArNetChannelNumber(
+            transmitter
+        ) !==
+        getArNetChannelNumber(
+            receiver
+        )
+    ) {
+        return 0;
+    }
+
+    return (
+        receiver -
+        transmitter
+    );
+}
+
 function getArNetDetuneAmount(
     transmittedFrequency
 ) {
