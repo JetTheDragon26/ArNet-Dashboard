@@ -699,6 +699,14 @@ function finishIncomingArNetStream(
         streamId
     );
 
+    if (
+    incomingArNetStreams.size ===
+    0
+) {
+    serviceAudioAmplitude =
+        0;
+}
+
     setStreamPlayerStatus(
         `Stream from ${stream.sender} completed.`,
         "#00FF7F"
@@ -742,7 +750,15 @@ function stopIncomingArNetStream(
     incomingArNetStreams.delete(
         streamId
     );
+
+    if (
+    incomingArNetStreams.size ===
+    0
+) {
+    serviceAudioAmplitude =
+        0;
 }
+
 
 function stopAllIncomingArNetStreams() {
     for (
