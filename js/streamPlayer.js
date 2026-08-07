@@ -385,7 +385,13 @@ async function receiveIncomingArNetStreamChunk(
                 bytes
             );
 
-        
+        updateIncomingArNetStreamAmplitude(
+    pcm16,
+    Number(
+        message.durationMs
+    ) ||
+        stream.chunkDurationMs
+);
 
         stream.chunks.set(
             sequence,
