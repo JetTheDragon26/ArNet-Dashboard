@@ -292,6 +292,174 @@ function isFrequencyInsideWaterfallBand(
     );
 }
 
+function initializeArNetWaterfallControls() {
+    if (
+        arnetWaterfallControlsInitialized
+    ) {
+        return;
+    }
+
+    const zoomInButton =
+        document.getElementById(
+            "btnWaterfallZoomIn"
+        );
+
+    const zoomOutButton =
+        document.getElementById(
+            "btnWaterfallZoomOut"
+        );
+
+    const fullBandButton =
+        document.getElementById(
+            "btnWaterfallFullBand"
+        );
+
+    const hoverText =
+        document.getElementById(
+            "txtWaterfallHoverFrequency"
+        );
+
+    if (zoomInButton) {
+        zoomInButton.addEventListener(
+            "click",
+            () => {
+                changeArNetWaterfallZoom(
+                    1
+                );
+            }
+        );
+    }
+
+    if (zoomOutButton) {
+        zoomOutButton.addEventListener(
+            "click",
+            () => {
+                changeArNetWaterfallZoom(
+                    -1
+                );
+            }
+        );
+    }
+
+    if (fullBandButton) {
+        fullBandButton.addEventListener(
+            "click",
+            resetArNetWaterfallZoom
+        );
+    }
+
+    if (imgWaterfall) {
+        imgWaterfall.style.cursor =
+            "crosshair";
+
+        imgWaterfall.addEventListener(
+            "mousemove",
+            event => {
+                const rectangle =
+                    imgWaterfall
+                        .getBoundingClientRect();
+
+                const x =
+                    event.clientX -
+                    rectangle.left;
+
+                arnetWaterfallHoverFrequency =
+                    waterfallXToFrequency(
+                        x,
+                        rectangle.width
+                    );
+
+                if (hoverText) {
+                    hoverText.textContent =
+                        `${arnetWaterfallHoverFrequency} Vt`;
+                }
+            }
+        );
+
+        imgWaterfall.addEventListener(
+            "mouseleave",
+            () => {
+                arnetWaterfallHoverFrequency =
+                    null;
+
+                if (hoverText) {
+                    hoverText.textContent =
+                        "-- Vt";
+                }
+            }
+        );
+
+        imgWaterfall.addEventListener(
+            "click",
+            event => {
+                const rectangle =
+                    imgWaterfall
+                        .getBoundingClientRect();
+
+                const x =
+                    event.clientX -
+                    rectangle.left;
+
+                const frequency =
+                    waterfallXToFrequency(
+                        x,
+                        rectangle.width
+                    );
+
+                txtFrequency.value =
+                    frequency;
+
+                txtFrequency.dispatchEvent(
+                    new Event(
+                        "input",
+                        {
+                            bubbles:
+                                true
+                        }
+                    )
+                );
+
+                txtFrequency.dispatchEvent(
+                    new Event(
+                        "change",
+                        {
+                            bubbles:
+                                true
+                        }
+                    )
+                );
+
+                if (
+                    typeof updateNetworkRegistration ===
+                        "function"
+                ) {
+                    updateNetworkRegistration();
+                }
+
+                updateArNetWaterfallControls();
+
+                console.log(
+                    `[ArNet Waterfall] Tuned to ${frequency} Vt.`
+                );
+            }
+        );
+    }
+
+    if (comboBand) {
+        comboBand.addEventListener(
+            "change",
+            () => {
+                resetArNetWaterfallZoom();
+            }
+        );
+    }
+
+    arnetWaterfallControlsInitialized =
+        true;
+
+    updateArNetWaterfallControls();
+}
+
 function getNetworkSignalIntensity(
     signal,
     x,
@@ -1807,6 +1975,7 @@ function renderUIFrame() {
  * Starts the display loop.
  */
 function startDisplayLoop() {
+    initializeArNetWaterfallControls();
     requestAnimationFrame(
         renderUIFrame
     );
