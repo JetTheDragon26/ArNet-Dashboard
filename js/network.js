@@ -1142,39 +1142,40 @@ async function handleNetworkMessage(
                     )
             };
 
-            const existingIndex =
-                networkSpectrumSignals
-                    .findIndex(
-                        existing =>
-                            existing.key ===
-                            signalKey
-                    );
+           const existingIndex =
+    networkSpectrumSignals
+        .findIndex(
+            existing =>
+                existing.key ===
+                signalKey
+        );
 
-            if (
-                existingIndex >= 0
-            ) {
-                networkSpectrumSignals[
-                    existingIndex
-                ] =
-                    signal;
-            }
-            else {
-                networkSpectrumSignals.push(
-                    signal
-                );
-            }
+if (
+    existingIndex >= 0
+) {
+    networkSpectrumSignals[
+        existingIndex
+    ] =
+        signal;
+}
+else {
+    networkSpectrumSignals.push(
+        signal
+    );
+}
 
-            networkSpectrumLastUpdate =
-                Date.now();
+networkSpectrumLastUpdate =
+    Date.now();
 
-            break;
-            
-        case "welcome":
-            networkStationId =
-                message.stationId ||
-                networkStationId;
+break;
+}
 
-            break;
+case "welcome":
+    networkStationId =
+        message.stationId ||
+        networkStationId;
+
+    break;
 
         case "registered":
             networkStationId =
