@@ -810,4 +810,3 @@ function setStreamPlayerStatus(
         txtStatus.style.color =
             color;
     }
-}
