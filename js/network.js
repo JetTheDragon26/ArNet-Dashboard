@@ -877,248 +877,298 @@ async function handleNetworkMessage(
         message.type
     ) {
 
-      case "spectrum-activity": {
-    const incomingMode =
-        String(
-            message.mode ||
-            ""
-        )
-            .trim()
-            .toUpperCase();
-
-    const incomingBand =
-        String(
-            message.band ||
-            ""
-        )
-            .trim()
-            .toUpperCase();
-
-    const currentMode =
-        String(
-            comboMode?.value ||
-            ""
-        )
-            .trim()
-            .toUpperCase();
-
-    const currentBand =
-        String(
-            comboBand?.value ||
-            ""
-        )
-            .trim()
-            .toUpperCase();
-
-    if (
-        incomingMode !==
-            currentMode ||
-        incomingBand !==
-            currentBand
-    ) {
-        break;
-    }
-
-    networkSpectrumSignals =
-        Array.isArray(
-            message.signals
-        )
-            ? message.signals
-                .map(
-                    signal => ({
-                        key:
-                            [
-                                Number(
-                                    signal.frequency
-                                ),
-
-                                String(
-                                    signal.callsign ||
-                                    "UNKNOWN"
-                                ),
-
-                                String(
-                                    signal.transmissionKind ||
-                                    "audio"
-                                )
-                            ].join("|"),
-
-                        frequency:
-                            Number(
-                                signal.frequency
-                            ),
-
-                        callsign:
-                            String(
-                                signal.callsign ||
-                                "UNKNOWN"
-                            ),
-
-                        transmissionKind:
-                            String(
-                                signal.transmissionKind ||
-                                "audio"
-                            )
-                                .trim()
-                                .toLowerCase(),
-
-                        strength:
-                            Math.max(
-                                0.1,
-                                Math.min(
-                                    1,
-                                    Number(
-                                        signal.strength
-                                    ) ||
-                                    0.75
-                                )
-                            ),
-
-                        width:
-                            Math.max(
-                                1,
-                                Math.min(
-                                    30,
-                                    Number(
-                                        signal.width
-                                    ) ||
-                                    5
-                                )
-                            ),
-
-                        startedAt:
-                            Number(
-                                signal.startedAt
-                            ) ||
-                            Date.now(),
-
-                        expiresAt:
-                            Number(
-                                signal.expiresAt
-                            ) ||
-                            (
-                                Date.now() +
-                                30000
-                            )
-                    })
+              case "spectrum-activity": {
+            const incomingMode =
+                String(
+                    message.mode ||
+                    ""
                 )
-                .filter(
-                    signal =>
-                        Number.isFinite(
-                            signal.frequency
+                    .trim()
+                    .toUpperCase();
+
+            const incomingBand =
+                String(
+                    message.band ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const currentMode =
+                String(
+                    comboMode?.value ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            const currentBand =
+                String(
+                    comboBand?.value ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
+
+            if (
+                incomingMode !==
+                    currentMode ||
+                incomingBand !==
+                    currentBand
+            ) {
+                break;
+            }
+
+            networkSpectrumSignals =
+                Array.isArray(
+                    message.signals
+                )
+                    ? message.signals
+                        .map(
+                            signal => ({
+                                key:
+                                    [
+                                        Number(
+                                            signal.frequency
+                                        ),
+
+                                        String(
+                                            signal.callsign ||
+                                            "UNKNOWN"
+                                        ),
+
+                                        String(
+                                            signal.transmissionKind ||
+                                            "audio"
+                                        )
+                                    ].join("|"),
+
+                                frequency:
+                                    Number(
+                                        signal.frequency
+                                    ),
+
+                                callsign:
+                                    String(
+                                        signal.callsign ||
+                                        "UNKNOWN"
+                                    ),
+
+                                transmissionKind:
+                                    String(
+                                        signal.transmissionKind ||
+                                        "audio"
+                                    )
+                                        .trim()
+                                        .toLowerCase(),
+
+                                strength:
+                                    Math.max(
+                                        0.1,
+                                        Math.min(
+                                            1,
+                                            Number(
+                                                signal.strength
+                                            ) ||
+                                            0.75
+                                        )
+                                    ),
+
+                                width:
+                                    Math.max(
+                                        1,
+                                        Math.min(
+                                            30,
+                                            Number(
+                                                signal.width
+                                            ) ||
+                                            5
+                                        )
+                                    ),
+
+                                startedAt:
+                                    Number(
+                                        signal.startedAt
+                                    ) ||
+                                    Date.now(),
+
+                                expiresAt:
+                                    Number(
+                                        signal.expiresAt
+                                    ) ||
+                                    (
+                                        Date.now() +
+                                        30000
+                                    )
+                            })
                         )
+                        .filter(
+                            signal =>
+                                Number.isFinite(
+                                    signal.frequency
+                                )
+                        )
+                    : [];
+
+            networkSpectrumLastUpdate =
+                Date.now();
+
+            break;
+        }
+
+        case "spectrum-pulse": {
+            const incomingMode =
+                String(
+                    message.mode ||
+                    ""
                 )
-            : [];
+                    .trim()
+                    .toUpperCase();
 
-    networkSpectrumLastUpdate =
-        Date.now();
+            const incomingBand =
+                String(
+                    message.band ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
-    break;
-}
-    const frequency =
-        Number(
-            message.frequency
-        );
+            const currentMode =
+                String(
+                    comboMode?.value ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
-    if (
-        !Number.isFinite(
-            frequency
-        )
-    ) {
-        break;
-    }
+            const currentBand =
+                String(
+                    comboBand?.value ||
+                    ""
+                )
+                    .trim()
+                    .toUpperCase();
 
-    const callsign =
-        String(
-            message.callsign ||
-            "UNKNOWN"
-        );
+            if (
+                incomingMode !==
+                    currentMode ||
+                incomingBand !==
+                    currentBand
+            ) {
+                break;
+            }
 
-    const transmissionKind =
-        String(
-            message.transmissionKind ||
-            "audio"
-        )
-            .trim()
-            .toLowerCase();
+            const frequency =
+                Number(
+                    message.frequency
+                );
 
-    const signalKey =
-        [
-            frequency,
-            callsign,
-            transmissionKind
-        ].join("|");
+            if (
+                !Number.isFinite(
+                    frequency
+                )
+            ) {
+                break;
+            }
 
-    const signal = {
-        key:
-            signalKey,
+            const callsign =
+                String(
+                    message.callsign ||
+                    "UNKNOWN"
+                );
 
-        frequency,
+            const transmissionKind =
+                String(
+                    message.transmissionKind ||
+                    "audio"
+                )
+                    .trim()
+                    .toLowerCase();
 
-        callsign,
+            const signalKey =
+                [
+                    frequency,
+                    callsign,
+                    transmissionKind
+                ].join("|");
 
-        transmissionKind,
+            const signal = {
+                key:
+                    signalKey,
 
-        strength:
-            Math.max(
-                0.1,
-                Math.min(
-                    1,
+                frequency,
+
+                callsign,
+
+                transmissionKind,
+
+                strength:
+                    Math.max(
+                        0.1,
+                        Math.min(
+                            1,
+                            Number(
+                                message.strength
+                            ) ||
+                            0.75
+                        )
+                    ),
+
+                width:
+                    Math.max(
+                        1,
+                        Math.min(
+                            30,
+                            Number(
+                                message.width
+                            ) ||
+                            5
+                        )
+                    ),
+
+                startedAt:
                     Number(
-                        message.strength
+                        message.startedAt
                     ) ||
-                    0.75
-                )
-            ),
+                    Date.now(),
 
-        startedAt:
-            Number(
-                message.startedAt
-            ) ||
-            Date.now(),
+                expiresAt:
+                    Number(
+                        message.expiresAt
+                    ) ||
+                    (
+                        Date.now() +
+                        30000
+                    )
+            };
 
-        expiresAt:
-            Number(
-                message.expiresAt
-            ) ||
-            (
-                Date.now() +
-                30000
-            )
-    };
+            const existingIndex =
+                networkSpectrumSignals
+                    .findIndex(
+                        existing =>
+                            existing.key ===
+                            signalKey
+                    );
 
-    const existingIndex =
-        networkSpectrumSignals
-            .findIndex(
-                existing =>
-                    existing.key ===
-                    signalKey
-            );
+            if (
+                existingIndex >= 0
+            ) {
+                networkSpectrumSignals[
+                    existingIndex
+                ] =
+                    signal;
+            }
+            else {
+                networkSpectrumSignals.push(
+                    signal
+                );
+            }
 
-    if (
-        existingIndex >= 0
-    ) {
-        networkSpectrumSignals[
-            existingIndex
-        ] =
-            signal;
-    }
-    else {
-        networkSpectrumSignals.push(
-            signal
-        );
-    }
+            networkSpectrumLastUpdate =
+                Date.now();
 
-    networkSpectrumLastUpdate =
-        Date.now();
-
-    console.log(
-        "[ArNet Spectrum] Signal:",
-        signal
-    );
-
-    break;
-}
+            break;
+        }
             
         case "welcome":
             networkStationId =
