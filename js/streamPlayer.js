@@ -18,6 +18,9 @@ let arnetIncomingStreamAnalyser =
 let arnetIncomingStreamAnalyserData =
     null;
 
+let arnetIncomingStreamAnalyserSink =
+    null;
+
 //====================================
 //-----------------------------------
 //====================================
