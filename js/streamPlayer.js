@@ -756,7 +756,7 @@ function stopIncomingArNetStream(
 ) {
     clearIncomingArNetStreamVisuals();
 }
-
+}
 
 function stopAllIncomingArNetStreams() {
     for (
