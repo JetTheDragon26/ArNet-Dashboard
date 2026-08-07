@@ -26,9 +26,17 @@ let arnetIncomingStreamAnalyserSink =
 //====================================
 
 function initializeIncomingStreamAnalyser() {
+    if (!audioCtx) {
+        return;
+    }
+
+    /*
+     * Recreate the analyser if the AudioContext changed.
+     */
     if (
-        !audioCtx ||
-        arnetIncomingStreamAnalyser
+        arnetIncomingStreamAnalyser &&
+        arnetIncomingStreamAnalyser.context ===
+            audioCtx
     ) {
         return;
     }
@@ -39,7 +47,8 @@ function initializeIncomingStreamAnalyser() {
     arnetIncomingStreamAnalyser.fftSize =
         512;
 
-    arnetIncomingStreamAnalyser.smoothingTimeConstant =
+    arnetIncomingStreamAnalyser
+        .smoothingTimeConstant =
         0.72;
 
     arnetIncomingStreamAnalyserData =
@@ -48,19 +57,37 @@ function initializeIncomingStreamAnalyser() {
                 .fftSize
         );
 
+    /*
+     * Silent output keeps the analyser active without
+     * sending a second copy of the audio to the speakers.
+     */
+    arnetIncomingStreamAnalyserSink =
+        audioCtx.createGain();
+
+    arnetIncomingStreamAnalyserSink.gain.value =
+        0;
+
     arnetIncomingStreamAnalyser.connect(
+        arnetIncomingStreamAnalyserSink
+    );
+
+    arnetIncomingStreamAnalyserSink.connect(
         audioCtx.destination
     );
 }
 
 function getIncomingArNetStreamAmplitude() {
     if (
-        !arnetIncomingStreamAnalyser ||
-        !arnetIncomingStreamAnalyserData ||
-        incomingArNetStreams.size === 0
-    ) {
-        return 0;
-    }
+    !audioCtx ||
+    !arnetIncomingStreamAnalyser ||
+    !arnetIncomingStreamAnalyserData ||
+    arnetIncomingStreamAnalyser.context !==
+        audioCtx ||
+    incomingArNetStreams.size ===
+        0
+) {
+    return 0;
+}
 
     arnetIncomingStreamAnalyser
         .getByteTimeDomainData(
@@ -618,16 +645,21 @@ function scheduleIncomingStreamChunk(
     source.buffer =
         audioBuffer;
 
-    if (
+    /*
+ * Main audible path.
+ */
+source.connect(
+    audioCtx.destination
+);
+
+/*
+ * Separate silent measurement path.
+ */
+if (
     arnetIncomingStreamAnalyser
 ) {
     source.connect(
         arnetIncomingStreamAnalyser
-    );
-}
-else {
-    source.connect(
-        audioCtx.destination
     );
 }
 
