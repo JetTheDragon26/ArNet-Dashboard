@@ -76,11 +76,10 @@ function getCurrentFullWaterfallBandRange() {
     }
 
     const frequency =
-        Number.parseInt(
-            txtFrequency?.value,
-            10
-        ) ||
-        0;
+    Number.parseFloat(
+        txtFrequency?.value
+    ) ||
+    0;
 
     return {
         min:
@@ -370,9 +369,9 @@ function initializeArNetWaterfallControls() {
                     );
 
                 if (hoverText) {
-                    hoverText.textContent =
-                        `${arnetWaterfallHoverFrequency} Vt`;
-                }
+    hoverText.textContent =
+        `${arnetWaterfallHoverFrequency.toFixed(2)} Vt`;
+               }
             }
         );
 
@@ -407,7 +406,7 @@ function initializeArNetWaterfallControls() {
                     );
 
                 txtFrequency.value =
-                    frequency;
+                  frequency.toFixed(2);
 
                 txtFrequency.dispatchEvent(
                     new Event(
@@ -730,14 +729,17 @@ function waterfallXToFrequency(
             )
         );
 
-    return Math.round(
+    const frequency =
         range.min +
         normalized *
             (
                 range.max -
                 range.min
-            )
-    );
+            );
+
+    return Math.round(
+        frequency * 100
+    ) / 100;
 }
 
 function chooseArNetWaterfallTickSpacing(
