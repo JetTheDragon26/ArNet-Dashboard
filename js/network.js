@@ -1168,7 +1168,6 @@ async function handleNetworkMessage(
                 Date.now();
 
             break;
-        }
             
         case "welcome":
             networkStationId =
