@@ -59,6 +59,26 @@ function getNetworkCallsign() {
     return value || "ANON";
 }
 
+function getNetworkChannelSector() {
+    const sector =
+        String(
+            comboChannelSector?.value ||
+            "FCS"
+        )
+            .trim()
+            .toUpperCase();
+
+    if (
+        sector === "LCS" ||
+        sector === "UCS" ||
+        sector === "FCS"
+    ) {
+        return sector;
+    }
+
+    return "FCS";
+}
+
 function getNetworkFrequency() {
     const value =
         Number.parseFloat(
@@ -229,6 +249,10 @@ function updateNetworkRegistration() {
 
         bandwidth:
             comboBandwidth.value
+
+        channelSector:
+        getNetworkChannelSector(),
+            
     });
 
     setNetworkStatus(
@@ -310,6 +334,10 @@ function connectArNetNetwork() {
 
                 bandwidth:
                     comboBandwidth.value
+
+               channelSector:
+                  getNetworkChannelSector(),
+                
             });
 
             setNetworkStatus(
@@ -469,7 +497,11 @@ function tuneNetworkFrequency(
                 comboBand.value,
 
             bandwidth:
-                comboBandwidth.value
+    comboBandwidth.value,
+
+channelSector:
+    getNetworkChannelSector()
+            
         });
     }
 }
