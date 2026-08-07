@@ -945,7 +945,7 @@ function drawArNetWaterfallTunedMarker() {
     wfCtx.stroke();
 
     const label =
-        `${Math.round(tunedFrequency)} Vt`;
+    `${tunedFrequency.toFixed(2)} Vt`;
 
     wfCtx.font =
         "bold 9px Consolas";
