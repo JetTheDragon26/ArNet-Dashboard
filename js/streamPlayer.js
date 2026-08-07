@@ -622,15 +622,136 @@ function scheduleIncomingStreamChunk(
         );
 
     const source =
-        audioCtx.createBufferSource();
+    audioCtx.createBufferSource();
 
-    source.buffer =
-        audioBuffer;
+source.buffer =
+    audioBuffer;
 
-    /*
- * Main audible path.
+/*
+ * Determine how far the receiver is from the
+ * transmitter's exact decimal frequency.
+ */
+const frequencyOffset =
+    typeof getArNetSignedFrequencyOffset ===
+        "function"
+        ? getArNetSignedFrequencyOffset(
+            stream.frequency
+        )
+        : 0;
+
+const absoluteOffset =
+    Math.abs(
+        frequencyOffset
+    );
+
+/*
+ * ======================================================
+ * OFF-FREQUENCY PITCH
+ * ======================================================
+ *
+ * Perfect tuning = 1.000 playback rate.
+ *
+ * Higher RX frequency makes the received audio
+ * slightly higher/sharper.
+ *
+ * Lower RX frequency makes it slightly lower/deeper.
+ */
+const playbackRate =
+    Math.max(
+        0.965,
+        Math.min(
+            1.035,
+            1 +
+            (
+                frequencyOffset *
+                0.07
+            )
+        )
+    );
+
+source.playbackRate.value =
+    playbackRate;
+
+/*
+ * ======================================================
+ * HF-LIKE FILTERING
+ * ======================================================
+ */
+
+const highPass =
+    audioCtx.createBiquadFilter();
+
+highPass.type =
+    "highpass";
+
+const lowPass =
+    audioCtx.createBiquadFilter();
+
+lowPass.type =
+    "lowpass";
+
+/*
+ * As tuning gets worse:
+ *
+ * - bass gets removed
+ * - treble gets removed
+ * - the remaining audio gets increasingly narrow
+ */
+highPass.frequency.value =
+    Math.min(
+        900,
+        120 +
+        (
+            absoluteOffset *
+            1500
+        )
+    );
+
+lowPass.frequency.value =
+    Math.max(
+        1400,
+        5200 -
+        (
+            absoluteOffset *
+            7500
+        )
+    );
+
+/*
+ * ======================================================
+ * SIGNAL LOSS
+ * ======================================================
+ */
+
+const detuneGain =
+    audioCtx.createGain();
+
+detuneGain.gain.value =
+    Math.max(
+        0.35,
+        1 -
+        (
+            absoluteOffset *
+            1.15
+        )
+    );
+
+/*
+ * Receiver audio chain.
  */
 source.connect(
+    highPass
+);
+
+highPass.connect(
+    lowPass
+);
+
+lowPass.connect(
+    detuneGain
+);
+
+detuneGain.connect(
     audioCtx.destination
 );
 
@@ -662,8 +783,11 @@ source.connect(
     );
 
     stream.nextPlaybackTime =
-        startTime +
-        audioBuffer.duration;
+    startTime +
+    (
+        audioBuffer.duration /
+        playbackRate
+    );
 }
 
 function countConsecutiveStreamChunks(
