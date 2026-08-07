@@ -72,6 +72,27 @@ function getNetworkFrequency() {
         : 4550.00;
 }
 
+function getArNetChannelNumber(
+    frequency
+) {
+    const numeric =
+        Number.parseFloat(
+            frequency
+        );
+
+    if (
+        !Number.isFinite(
+            numeric
+        )
+    ) {
+        return null;
+    }
+
+    return Math.floor(
+        numeric
+    );
+}
+
 // ======================================================
 // Registration
 // ======================================================
