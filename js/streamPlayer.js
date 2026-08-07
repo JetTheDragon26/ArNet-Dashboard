@@ -12,6 +12,101 @@ const ARNET_STREAM_SCHEDULE_AHEAD_SECONDS =
 const incomingArNetStreams =
     new Map();
 
+let arnetIncomingStreamAnalyser =
+    null;
+
+let arnetIncomingStreamAnalyserData =
+    null;
+
+//====================================
+//-----------------------------------
+//====================================
+
+function initializeIncomingStreamAnalyser() {
+    if (
+        !audioCtx ||
+        arnetIncomingStreamAnalyser
+    ) {
+        return;
+    }
+
+    arnetIncomingStreamAnalyser =
+        audioCtx.createAnalyser();
+
+    arnetIncomingStreamAnalyser.fftSize =
+        512;
+
+    arnetIncomingStreamAnalyser.smoothingTimeConstant =
+        0.72;
+
+    arnetIncomingStreamAnalyserData =
+        new Uint8Array(
+            arnetIncomingStreamAnalyser
+                .fftSize
+        );
+
+    arnetIncomingStreamAnalyser.connect(
+        audioCtx.destination
+    );
+}
+
+function getIncomingArNetStreamAmplitude() {
+    if (
+        !arnetIncomingStreamAnalyser ||
+        !arnetIncomingStreamAnalyserData ||
+        incomingArNetStreams.size === 0
+    ) {
+        return 0;
+    }
+
+    arnetIncomingStreamAnalyser
+        .getByteTimeDomainData(
+            arnetIncomingStreamAnalyserData
+        );
+
+    let sumSquared =
+        0;
+
+    for (
+        let index = 0;
+        index <
+            arnetIncomingStreamAnalyserData.length;
+        index++
+    ) {
+        const normalized =
+            (
+                arnetIncomingStreamAnalyserData[
+                    index
+                ] -
+                128
+            ) /
+            128;
+
+        sumSquared +=
+            normalized *
+            normalized;
+    }
+
+    const rms =
+        Math.sqrt(
+            sumSquared /
+            arnetIncomingStreamAnalyserData
+                .length
+        );
+
+    /*
+     * Raise the visual level without clipping it.
+     */
+    return Math.max(
+        0,
+        Math.min(
+            1,
+            rms *
+                3.5
+        )
+    );
+}
+
 // ======================================================
 // Base64 and PCM helpers
 // ======================================================
@@ -155,6 +250,8 @@ async function beginIncomingArNetStream(
     ) {
         await audioCtx.resume();
     }
+
+    initializeIncomingStreamAnalyser();
 
     stopIncomingArNetStream(
         message.streamId
@@ -518,9 +615,18 @@ function scheduleIncomingStreamChunk(
     source.buffer =
         audioBuffer;
 
+    if (
+    arnetIncomingStreamAnalyser
+) {
+    source.connect(
+        arnetIncomingStreamAnalyser
+    );
+}
+else {
     source.connect(
         audioCtx.destination
     );
+}
 
     const startTime =
         Math.max(
