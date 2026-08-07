@@ -706,9 +706,19 @@ function updateArNetWaterfallControls() {
         const range =
             getCurrentWaterfallBandRange();
 
-        rangeText.textContent =
-            `${Math.round(range.min)}–` +
-            `${Math.round(range.max)} Vt`;
+       const decimals =
+    arnetWaterfallZoomLevel >= 128
+        ? 2
+        : (
+            arnetWaterfallZoomLevel >= 32
+                ? 1
+                : 0
+        );
+
+rangeText.textContent =
+    `${range.min.toFixed(decimals)}–` +
+    `${range.max.toFixed(decimals)} Vt`;
+        
     }
 }
 
