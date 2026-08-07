@@ -200,6 +200,25 @@
                         </span>
                     </div>
 
+<button
+    id="btnDashboardHelp"
+    type="button"
+    title="Dashboard Help"
+    style="
+        width:22px;
+        height:22px;
+        padding:0;
+        margin-left:6px;
+        background:#222;
+        color:#00FFFF;
+        border:1px solid #005555;
+        font-weight:bold;
+        cursor:pointer;
+    "
+>
+    ?
+</button>
+                    
                     <div
                         style="
                             display: flex;
@@ -984,6 +1003,238 @@
                 </button>
             </div>
 
+<div
+    id="dashboardHelpOverlay"
+    style="
+        display:none;
+        position:fixed;
+        inset:0;
+        background:rgba(0,0,0,0.75);
+        z-index:9999;
+        align-items:center;
+        justify-content:center;
+    "
+>
+    <div
+        style="
+            width:min(760px,90vw);
+            max-height:85vh;
+            overflow-y:auto;
+            background:#080808;
+            border:1px solid #00AAAA;
+            padding:16px;
+            color:#CCCCCC;
+            font-family:Consolas,monospace;
+            box-shadow:0 0 18px #003333;
+        "
+    >
+        <div
+            style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                margin-bottom:12px;
+            "
+        >
+            <strong
+                style="
+                    color:#00FFFF;
+                    font-size:18px;
+                "
+            >
+                ArNet Dashboard Guide
+            </strong>
+
+            <button
+                id="btnCloseDashboardHelp"
+                type="button"
+                style="
+                    background:#220000;
+                    color:#FF6666;
+                    border:1px solid #773333;
+                    cursor:pointer;
+                "
+            >
+                CLOSE
+            </button>
+        </div>
+
+        <h3 style="color:#FFCC00;">
+            Frequency
+        </h3>
+
+        <p>
+            The main frequency display uses virtual
+            ArNet frequencies in Vt.
+        </p>
+
+        <p>
+            Each integer frequency is one channel.
+            For example:
+        </p>
+
+        <pre>
+5200.00 - 5200.99 = Channel 5200
+        </pre>
+
+        <p>
+            The ±1.00, ±0.10 and ±0.01 buttons provide
+            coarse, medium and fine tuning.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Channel Sectors
+        </h3>
+
+        <p>
+            <b style="color:#FF66FF;">LCS</b>
+            — Lower Channel Sector.
+            Uses approximately .00 through .49.
+            Similar in concept to LSB.
+        </p>
+
+        <p>
+            <b style="color:#FF66FF;">UCS</b>
+            — Upper Channel Sector.
+            Uses approximately .50 through .99.
+            Similar in concept to USB.
+        </p>
+
+        <p>
+            <b style="color:#FF66FF;">FCS</b>
+            — Full Channel Sector.
+            Receives the entire .00 through .99 channel.
+            Similar in concept to full-channel AM.
+        </p>
+
+        <p>
+            LCS and UCS can carry separate conversations
+            simultaneously on the same integer channel.
+            An FCS receiver can hear both.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Offset Meter
+        </h3>
+
+        <p>
+            Shows your decimal position inside the
+            current channel.
+        </p>
+
+        <pre>
+.00       .50       .99
+LEFT     CENTER     RIGHT
+        </pre>
+
+        <h3 style="color:#FFCC00;">
+            S-Meter
+        </h3>
+
+        <p>
+            Displays received signal/audio strength.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Scope
+        </h3>
+
+        <p>
+            Displays the waveform of received or
+            transmitted audio activity.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Waterfall
+        </h3>
+
+        <p>
+            Displays activity across the currently
+            selected ArNet band.
+        </p>
+
+        <p>
+            Click the waterfall to tune directly to
+            a frequency. Use the zoom controls for
+            precise decimal-frequency tuning.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Off-Frequency Reception
+        </h3>
+
+        <p>
+            Signals within the same integer channel can
+            still be received while slightly mistuned.
+            The farther the receiver is from the exact
+            transmitting frequency, the more distorted
+            and filtered the audio becomes.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Modes
+        </h3>
+
+        <p>
+            AARM, ABM and ABMTV control the ArNet
+            transmission mode. A receiver normally must
+            use the same mode as the transmitter.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Bands
+        </h3>
+
+        <p>
+            The band selector chooses which ArNet band
+            and frequency range the dashboard is using.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Bandwidth
+        </h3>
+
+        <p>
+            Bandwidth controls the configured virtual
+            receive/transmit width. Stations normally
+            need matching bandwidth settings.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Network
+        </h3>
+
+        <p>
+            The dashboard connects to the ArNet relay.
+            Audio streams, media transmissions, spectrum
+            activity and station information are shared
+            through the relay.
+        </p>
+
+        <h3 style="color:#FFCC00;">
+            Morse Decoder
+        </h3>
+
+        <p>
+            Displays Morse-related decoded information
+            received or generated by compatible ArNet
+            transmissions.
+        </p>
+
+        <p
+            style="
+                color:#777;
+                margin-top:18px;
+                border-top:1px solid #222;
+                padding-top:10px;
+            "
+        >
+            ArNet Dashboard — integrated virtual
+            communications interface.
+        </p>
+    </div>
+</div>
+            
             <div
                 class="border-box"
                 style="
