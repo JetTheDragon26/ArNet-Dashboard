@@ -740,6 +740,7 @@ function finishIncomingArNetStream(
 ) {
     serviceAudioAmplitude =
         0;
+    }
 }
 
     setStreamPlayerStatus(
