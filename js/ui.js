@@ -981,6 +981,72 @@ const btnTuneUpBig =
         "btnTuneUpBig"
     );
 
+if (btnTuneDownBig) {
+    btnTuneDownBig.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                -1.00
+            );
+        }
+    );
+}
+
+if (btnTuneDownMedium) {
+    btnTuneDownMedium.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                -0.10
+            );
+        }
+    );
+}
+
+if (btnTuneDownSmall) {
+    btnTuneDownSmall.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                -0.01
+            );
+        }
+    );
+}
+
+if (btnTuneUpSmall) {
+    btnTuneUpSmall.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                0.01
+            );
+        }
+    );
+}
+
+if (btnTuneUpMedium) {
+    btnTuneUpMedium.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                0.10
+            );
+        }
+    );
+}
+
+if (btnTuneUpBig) {
+    btnTuneUpBig.addEventListener(
+        "click",
+        () => {
+            fineTuneFrequency(
+                1.00
+            );
+        }
+    );
+}
+    
 txtCallsign.addEventListener(
     "keydown",
     event => {
