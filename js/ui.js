@@ -951,6 +951,29 @@ txtCallsign.addEventListener(
     updateNetworkRegistration
 );
 
+    if (
+    comboChannelSector
+) {
+    comboChannelSector.addEventListener(
+        "change",
+        () => {
+            if (
+                typeof updateNetworkRegistration ===
+                    "function"
+            ) {
+                updateNetworkRegistration();
+            }
+
+            if (
+                typeof updateArNetWaterfallControls ===
+                    "function"
+            ) {
+                updateArNetWaterfallControls();
+            }
+        }
+    );
+}
+
     const btnTuneDownBig =
     document.getElementById(
         "btnTuneDownBig"
