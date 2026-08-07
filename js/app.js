@@ -136,14 +136,14 @@ function validateFrequency() {
             maxFreq + 0.99;
     }
 
-    /*
-     * Keep frequencies to two decimal places.
-     */
     value =
         Math.round(
             value * 100
         ) / 100;
 
+    /*
+     * THIS makes the textbox display XXXX.xx
+     */
     txtFrequency.value =
         value.toFixed(2);
 
