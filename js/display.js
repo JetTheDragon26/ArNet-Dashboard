@@ -40,7 +40,24 @@ const ARNET_WATERFALL_BAND_RANGES = {
     }
 };
 
-function getCurrentWaterfallBandRange() {
+const ARNET_WATERFALL_ZOOM_LEVELS = [
+    1,
+    2,
+    4,
+    8,
+    16
+];
+
+let arnetWaterfallZoomLevel =
+    1;
+
+let arnetWaterfallHoverFrequency =
+    null;
+
+let arnetWaterfallControlsInitialized =
+    false;
+
+function getCurrentFullWaterfallBandRange() {
     const bandName =
         String(
             comboBand?.value ||
@@ -76,6 +93,99 @@ function getCurrentWaterfallBandRange() {
         max:
             frequency +
                 100
+    };
+}
+
+function getCurrentWaterfallBandRange() {
+    const fullRange =
+        getCurrentFullWaterfallBandRange();
+
+    if (
+        arnetWaterfallZoomLevel <=
+        1
+    ) {
+        return {
+            min:
+                fullRange.min,
+
+            max:
+                fullRange.max
+        };
+    }
+
+    const tunedFrequency =
+        Number.parseFloat(
+            txtFrequency?.value
+        );
+
+    const centerFrequency =
+        Number.isFinite(
+            tunedFrequency
+        )
+            ? tunedFrequency
+            : (
+                fullRange.min +
+                fullRange.max
+            ) /
+                2;
+
+    const fullSpan =
+        fullRange.max -
+        fullRange.min;
+
+    const visibleSpan =
+        fullSpan /
+        arnetWaterfallZoomLevel;
+
+    let minimum =
+        centerFrequency -
+        visibleSpan /
+            2;
+
+    let maximum =
+        centerFrequency +
+        visibleSpan /
+            2;
+
+    /*
+     * Keep the zoomed display inside the band.
+     */
+    if (
+        minimum <
+        fullRange.min
+    ) {
+        maximum +=
+            fullRange.min -
+            minimum;
+
+        minimum =
+            fullRange.min;
+    }
+
+    if (
+        maximum >
+        fullRange.max
+    ) {
+        minimum -=
+            maximum -
+            fullRange.max;
+
+        maximum =
+            fullRange.max;
+    }
+
+    return {
+        min:
+            Math.max(
+                fullRange.min,
+                minimum
+            ),
+
+        max:
+            Math.min(
+                fullRange.max,
+                maximum
+            )
     };
 }
 
@@ -121,6 +231,50 @@ function frequencyToWaterfallX(
     );
 }
 
+function waterfallVtWidthToPixels(
+    bandwidthVt,
+    canvasWidth = wfWidth
+) {
+    const range =
+        getCurrentWaterfallBandRange();
+
+    const visibleSpan =
+        range.max -
+        range.min;
+
+    if (
+        visibleSpan <= 0 ||
+        canvasWidth <= 0
+    ) {
+        return 0.65;
+    }
+
+    const width =
+        (
+            Math.max(
+                0.5,
+                Number(
+                    bandwidthVt
+                ) ||
+                1
+            ) /
+            visibleSpan
+        ) *
+        canvasWidth;
+
+    /*
+     * Keep narrow signals visible without turning them
+     * into giant blocks.
+     */
+    return Math.max(
+        0.65,
+        Math.min(
+            12,
+            width
+        )
+    );
+}
+
 function isFrequencyInsideWaterfallBand(
     frequency
 ) {
@@ -147,7 +301,9 @@ function getNetworkSignalIntensity(
         String(
             signal.transmissionKind ||
             "audio"
-        ).toLowerCase();
+        )
+            .trim()
+            .toLowerCase();
 
     const baseStrength =
         Math.max(
@@ -161,36 +317,96 @@ function getNetworkSignalIntensity(
             )
         );
 
-    let width =
-        Math.max(
-            1.5,
-            Number(
-                signal.width
-            ) ||
-            5
+    /*
+     * Width values below are virtual bandwidth in Vt,
+     * not raw pixels.
+     */
+    let bandwidthVt;
+
+    switch (kind) {
+        case "morse":
+            bandwidthVt =
+                1.5;
+            break;
+
+        case "ident":
+            bandwidthVt =
+                2;
+            break;
+
+        case "voice":
+            bandwidthVt =
+                3;
+            break;
+
+        case "audio":
+        case "audio-stream":
+        case "stream":
+            bandwidthVt =
+                4;
+            break;
+
+        case "music":
+            bandwidthVt =
+                6;
+            break;
+
+        case "photo":
+            bandwidthVt =
+                8;
+            break;
+
+        case "video":
+            bandwidthVt =
+                12;
+            break;
+
+        default:
+            bandwidthVt =
+                Math.max(
+                    2,
+                    Number(
+                        signal.width
+                    ) ||
+                    3
+                );
+            break;
+    }
+
+    const widthPixels =
+        waterfallVtWidthToPixels(
+            bandwidthVt
         );
+
+    const distance =
+        Math.abs(
+            x -
+            signalX
+        );
+
+    if (
+        distance >
+        widthPixels
+    ) {
+        return 0;
+    }
 
     let modulation =
         1;
 
     switch (kind) {
         case "morse":
-            width =
-                Math.max(
-                    1.5,
-                    width *
-                        0.45
-                );
-
             modulation =
                 Math.random() >
                     0.42
                     ? 1
-                    : 0.12;
+                    : 0.08;
             break;
 
         case "voice":
         case "audio":
+        case "audio-stream":
+        case "stream":
             modulation =
                 0.48 +
                 Math.random() *
@@ -198,25 +414,13 @@ function getNetworkSignalIntensity(
             break;
 
         case "music":
-            width =
-                Math.max(
-                    width,
-                    9
-                );
-
             modulation =
-                0.72 +
+                0.74 +
                 Math.random() *
-                    0.28;
+                    0.26;
             break;
 
         case "photo":
-            width =
-                Math.max(
-                    width,
-                    10
-                );
-
             modulation =
                 (
                     Math.floor(
@@ -226,41 +430,19 @@ function getNetworkSignalIntensity(
                     2
                 )
                     ? 0.9
-                    : 0.48;
+                    : 0.45;
             break;
 
         case "video":
-            width =
-                Math.max(
-                    width,
-                    16
-                );
-
             modulation =
                 0.78 +
-                (
-                    Math.sin(
-                        Date.now() /
+                Math.sin(
+                    Date.now() /
                         70 +
-                        x *
+                    x *
                         0.7
-                    ) *
-                    0.16
-                );
-            break;
-
-        case "ident":
-            width =
-                Math.max(
-                    2,
-                    width *
-                        0.6
-                );
-
-            modulation =
-                0.65 +
-                Math.random() *
-                    0.35;
+                ) *
+                    0.14;
             break;
 
         default:
@@ -271,24 +453,11 @@ function getNetworkSignalIntensity(
             break;
     }
 
-    const distance =
-        Math.abs(
-            x -
-            signalX
-        );
-
-    if (
-        distance >
-        width
-    ) {
-        return 0;
-    }
-
     const shape =
         Math.cos(
             (
                 distance /
-                width
+                widthPixels
             ) *
             (
                 Math.PI /
@@ -301,6 +470,332 @@ function getNetworkSignalIntensity(
         modulation *
         shape
     );
+}
+
+function changeArNetWaterfallZoom(
+    direction
+) {
+    const currentIndex =
+        ARNET_WATERFALL_ZOOM_LEVELS
+            .indexOf(
+                arnetWaterfallZoomLevel
+            );
+
+    const safeCurrentIndex =
+        currentIndex >= 0
+            ? currentIndex
+            : 0;
+
+    const nextIndex =
+        Math.max(
+            0,
+            Math.min(
+                ARNET_WATERFALL_ZOOM_LEVELS
+                    .length -
+                    1,
+                safeCurrentIndex +
+                    direction
+            )
+        );
+
+    arnetWaterfallZoomLevel =
+        ARNET_WATERFALL_ZOOM_LEVELS[
+            nextIndex
+        ];
+
+    updateArNetWaterfallControls();
+}
+
+function resetArNetWaterfallZoom() {
+    arnetWaterfallZoomLevel =
+        1;
+
+    updateArNetWaterfallControls();
+}
+
+function updateArNetWaterfallControls() {
+    const zoomText =
+        document.getElementById(
+            "txtWaterfallZoom"
+        );
+
+    const rangeText =
+        document.getElementById(
+            "txtWaterfallVisibleRange"
+        );
+
+    if (zoomText) {
+        zoomText.textContent =
+            `${arnetWaterfallZoomLevel}×`;
+    }
+
+    if (rangeText) {
+        const range =
+            getCurrentWaterfallBandRange();
+
+        rangeText.textContent =
+            `${Math.round(range.min)}–` +
+            `${Math.round(range.max)} Vt`;
+    }
+}
+
+function waterfallXToFrequency(
+    x,
+    canvasWidth
+) {
+    const range =
+        getCurrentWaterfallBandRange();
+
+    const safeWidth =
+        Math.max(
+            1,
+            canvasWidth
+        );
+
+    const normalized =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                x /
+                    safeWidth
+            )
+        );
+
+    return Math.round(
+        range.min +
+        normalized *
+            (
+                range.max -
+                range.min
+            )
+    );
+}
+
+function chooseArNetWaterfallTickSpacing(
+    visibleSpan
+) {
+    const spacings = [
+        1,
+        2,
+        5,
+        10,
+        20,
+        25,
+        50,
+        100,
+        200,
+        250,
+        500,
+        1000
+    ];
+
+    for (
+        const spacing of
+        spacings
+    ) {
+        if (
+            visibleSpan /
+                spacing <=
+            7
+        ) {
+            return spacing;
+        }
+    }
+
+    return 1000;
+}
+
+function drawArNetWaterfallFrequencyScale() {
+    const range =
+        getCurrentWaterfallBandRange();
+
+    const visibleSpan =
+        range.max -
+        range.min;
+
+    const spacing =
+        chooseArNetWaterfallTickSpacing(
+            visibleSpan
+        );
+
+    const firstFrequency =
+        Math.ceil(
+            range.min /
+            spacing
+        ) *
+        spacing;
+
+    wfCtx.save();
+
+    wfCtx.font =
+        "8px Consolas";
+
+    wfCtx.textAlign =
+        "center";
+
+    wfCtx.textBaseline =
+        "top";
+
+    for (
+        let frequency =
+            firstFrequency;
+        frequency <=
+            range.max;
+        frequency +=
+            spacing
+    ) {
+        const x =
+            frequencyToWaterfallX(
+                frequency,
+                imgWaterfall.width
+            );
+
+        wfCtx.strokeStyle =
+            "rgba(120, 200, 255, 0.32)";
+
+        wfCtx.lineWidth =
+            1;
+
+        wfCtx.beginPath();
+
+        wfCtx.moveTo(
+            x,
+            0
+        );
+
+        wfCtx.lineTo(
+            x,
+            7
+        );
+
+        wfCtx.stroke();
+
+        wfCtx.fillStyle =
+            "rgba(180, 225, 255, 0.9)";
+
+        wfCtx.fillText(
+            String(
+                Math.round(
+                    frequency
+                )
+            ),
+            x,
+            8
+        );
+    }
+
+    wfCtx.restore();
+}
+
+function drawArNetWaterfallTunedMarker() {
+    const tunedFrequency =
+        Number.parseFloat(
+            txtFrequency?.value
+        );
+
+    if (
+        !Number.isFinite(
+            tunedFrequency
+        )
+    ) {
+        return;
+    }
+
+    const range =
+        getCurrentWaterfallBandRange();
+
+    if (
+        tunedFrequency <
+            range.min ||
+        tunedFrequency >
+            range.max
+    ) {
+        return;
+    }
+
+    const x =
+        frequencyToWaterfallX(
+            tunedFrequency,
+            imgWaterfall.width
+        );
+
+    wfCtx.save();
+
+    wfCtx.strokeStyle =
+        "#00FFFF";
+
+    wfCtx.lineWidth =
+        1;
+
+    wfCtx.beginPath();
+
+    wfCtx.moveTo(
+        x,
+        0
+    );
+
+    wfCtx.lineTo(
+        x,
+        imgWaterfall.height
+    );
+
+    wfCtx.stroke();
+
+    const label =
+        `${Math.round(tunedFrequency)} Vt`;
+
+    wfCtx.font =
+        "bold 9px Consolas";
+
+    const labelWidth =
+        wfCtx.measureText(
+            label
+        ).width +
+        8;
+
+    const labelX =
+        Math.max(
+            0,
+            Math.min(
+                imgWaterfall.width -
+                    labelWidth,
+                x -
+                    labelWidth /
+                        2
+            )
+        );
+
+    wfCtx.fillStyle =
+        "rgba(0, 18, 24, 0.9)";
+
+    wfCtx.fillRect(
+        labelX,
+        imgWaterfall.height -
+            15,
+        labelWidth,
+        14
+    );
+
+    wfCtx.fillStyle =
+        "#00FFFF";
+
+    wfCtx.textAlign =
+        "center";
+
+    wfCtx.textBaseline =
+        "middle";
+
+    wfCtx.fillText(
+        label,
+        labelX +
+            labelWidth /
+                2,
+        imgWaterfall.height -
+            8
+    );
+
+    wfCtx.restore();
 }
 
 /**
@@ -1083,9 +1578,11 @@ const activeSignals =
                 );
 
             const localWidth =
-                isAbmtvMode
-                    ? 14
-                    : 5;
+    waterfallVtWidthToPixels(
+        isAbmtvMode
+            ? 10
+            : 3
+    );
 
             if (
                 distance <
@@ -1244,6 +1741,9 @@ function drawWaterfall(
         imgWaterfall.width,
         imgWaterfall.height
     );
+
+    drawArNetWaterfallFrequencyScale();
+    drawArNetWaterfallTunedMarker();
 }
 
 /**
