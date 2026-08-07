@@ -974,6 +974,81 @@ txtCallsign.addEventListener(
     );
 }
 
+    const btnDashboardHelp =
+    document.getElementById(
+        "btnDashboardHelp"
+    );
+
+const btnCloseDashboardHelp =
+    document.getElementById(
+        "btnCloseDashboardHelp"
+    );
+
+const dashboardHelpOverlay =
+    document.getElementById(
+        "dashboardHelpOverlay"
+    );
+
+if (
+    btnDashboardHelp &&
+    dashboardHelpOverlay
+) {
+    btnDashboardHelp.addEventListener(
+        "click",
+        () => {
+            dashboardHelpOverlay.style.display =
+                "flex";
+        }
+    );
+}
+
+if (
+    btnCloseDashboardHelp &&
+    dashboardHelpOverlay
+) {
+    btnCloseDashboardHelp.addEventListener(
+        "click",
+        () => {
+            dashboardHelpOverlay.style.display =
+                "none";
+        }
+    );
+}
+
+/*
+ * Clicking the dark area outside the guide
+ * also closes it.
+ */
+if (dashboardHelpOverlay) {
+    dashboardHelpOverlay.addEventListener(
+        "click",
+        event => {
+            if (
+                event.target ===
+                dashboardHelpOverlay
+            ) {
+                dashboardHelpOverlay.style.display =
+                    "none";
+            }
+        }
+    );
+}
+
+    document.addEventListener(
+    "keydown",
+    event => {
+        if (
+            event.key === "Escape" &&
+            dashboardHelpOverlay &&
+            dashboardHelpOverlay.style.display ===
+                "flex"
+        ) {
+            dashboardHelpOverlay.style.display =
+                "none";
+        }
+    }
+);
+
     const btnTuneDownBig =
     document.getElementById(
         "btnTuneDownBig"
