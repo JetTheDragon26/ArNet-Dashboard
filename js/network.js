@@ -61,14 +61,15 @@ function getNetworkCallsign() {
 
 function getNetworkFrequency() {
     const value =
-        Number.parseInt(
-            txtFrequency.value,
-            10
+        Number.parseFloat(
+            txtFrequency.value
         );
 
     return Number.isFinite(value)
-        ? value
-        : 4550;
+        ? Math.round(
+            value * 100
+        ) / 100
+        : 4550.00;
 }
 
 // ======================================================
@@ -305,10 +306,17 @@ function tuneNetworkFrequency(
     frequency
 ) {
     const numericFrequency =
-        Number.parseInt(
-            frequency,
-            10
-        );
+    Number.parseFloat(
+        frequency
+    );
+
+    const roundedFrequency =
+    Math.round(
+        numericFrequency * 100
+    ) / 100;
+
+    networkCurrentFrequency =
+     roundedFrequency;
 
     if (
         !Number.isFinite(
@@ -327,7 +335,7 @@ function tuneNetworkFrequency(
                 "tune",
 
             frequency:
-                numericFrequency,
+             roundedFrequency,
 
             mode:
                 comboMode.value,
