@@ -45,7 +45,13 @@ const ARNET_WATERFALL_ZOOM_LEVELS = [
     2,
     4,
     8,
-    16
+    16,
+    32,
+    64,
+    128,
+    256,
+    512,
+    1024
 ];
 
 let arnetWaterfallZoomLevel =
@@ -746,19 +752,26 @@ function chooseArNetWaterfallTickSpacing(
     visibleSpan
 ) {
     const spacings = [
-        1,
-        2,
-        5,
-        10,
-        20,
-        25,
-        50,
-        100,
-        200,
-        250,
-        500,
-        1000
-    ];
+    0.01,
+    0.02,
+    0.05,
+    0.10,
+    0.20,
+    0.25,
+    0.50,
+    1,
+    2,
+    5,
+    10,
+    20,
+    25,
+    50,
+    100,
+    200,
+    250,
+    500,
+    1000
+];
 
     for (
         const spacing of
@@ -844,15 +857,24 @@ function drawArNetWaterfallFrequencyScale() {
         wfCtx.fillStyle =
             "rgba(180, 225, 255, 0.9)";
 
-        wfCtx.fillText(
-            String(
-                Math.round(
-                    frequency
-                )
-            ),
-            x,
-            8
-        );
+        let frequencyLabel;
+
+if (
+    spacing < 1
+) {
+    frequencyLabel =
+        frequency.toFixed(2);
+}
+else {
+    frequencyLabel =
+        frequency.toFixed(0);
+}
+
+wfCtx.fillText(
+    frequencyLabel,
+    x,
+    8
+);
     }
 
     wfCtx.restore();
