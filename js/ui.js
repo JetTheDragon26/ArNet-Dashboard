@@ -720,12 +720,22 @@ function toggleDisplayMode() {
     isScopeMode =
         !isScopeMode;
 
+    const waterfallControls =
+        document.getElementById(
+            "arnetWaterfallControls"
+        );
+
     if (isScopeMode) {
         canvasScope.style.display =
             "block";
 
         imgWaterfall.style.display =
             "none";
+
+        if (waterfallControls) {
+            waterfallControls.style.display =
+                "none";
+        }
 
         lblScopeMode.textContent =
             "SPECTRUM SCOPE";
@@ -740,11 +750,23 @@ function toggleDisplayMode() {
         imgWaterfall.style.display =
             "block";
 
+        if (waterfallControls) {
+            waterfallControls.style.display =
+                "flex";
+        }
+
         lblScopeMode.textContent =
             "WATERFALL DISPLAY";
 
         btnToggleDisplay.textContent =
             "🔄 SWITCH TO SPECTRUM";
+
+        if (
+            typeof updateArNetWaterfallControls ===
+                "function"
+        ) {
+            updateArNetWaterfallControls();
+        }
     }
 }
 
