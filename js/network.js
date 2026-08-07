@@ -93,6 +93,75 @@ function getArNetChannelNumber(
     );
 }
 
+function getArNetDetuneAmount(
+    transmittedFrequency
+) {
+    const transmitter =
+        Number.parseFloat(
+            transmittedFrequency
+        );
+
+    const receiver =
+        getNetworkFrequency();
+
+    if (
+        !Number.isFinite(
+            transmitter
+        ) ||
+        !Number.isFinite(
+            receiver
+        )
+    ) {
+        return 0;
+    }
+
+    const transmitterChannel =
+        getArNetChannelNumber(
+            transmitter
+        );
+
+    const receiverChannel =
+        getArNetChannelNumber(
+            receiver
+        );
+
+    if (
+        transmitterChannel !==
+        receiverChannel
+    ) {
+        return 1;
+    }
+
+    return Math.min(
+        1,
+        Math.abs(
+            receiver -
+            transmitter
+        )
+    );
+}
+
+function getArNetChannelNumber(
+    frequency
+) {
+    const numeric =
+        Number.parseFloat(
+            frequency
+        );
+
+    if (
+        !Number.isFinite(
+            numeric
+        )
+    ) {
+        return null;
+    }
+
+    return Math.floor(
+        numeric
+    );
+}
+
 // ======================================================
 // Registration
 // ======================================================
@@ -731,26 +800,35 @@ function shouldReceiveNetworkTransmission(
     message
 ) {
     const incomingFrequency =
-        Number.parseInt(
-            message.frequency,
-            10
+        Number.parseFloat(
+            message.frequency
         );
 
     const localFrequency =
         getNetworkFrequency();
 
-    if (
-        !Number.isFinite(
+    const incomingChannel =
+        getArNetChannelNumber(
             incomingFrequency
-        ) ||
-        incomingFrequency !==
+        );
+
+    const localChannel =
+        getArNetChannelNumber(
             localFrequency
+        );
+
+    if (
+        incomingChannel === null ||
+        localChannel === null ||
+        incomingChannel !==
+            localChannel
     ) {
         console.log(
             `[ArNet] Ignored transmission from ` +
             `${message.from || "UNKNOWN"}: ` +
-            `${message.frequency} Vt does not match ` +
-            `${localFrequency} Vt.`
+            `${message.frequency} Vt is on channel ` +
+            `${incomingChannel}, receiver is on channel ` +
+            `${localChannel}.`
         );
 
         return false;
