@@ -106,7 +106,7 @@ function updateFrequencyLimits() {
             break;
     }
 
-    txtFrequency.value = String(minFreq);
+    txtFrequency.value = Number(minFreq).toFixed(2);
 
     setStatus(
         `Band [${selectedBand}] Active (${minFreq} - ${maxFreq} Vt)`,
@@ -115,25 +115,52 @@ function updateFrequencyLimits() {
 }
 
 function validateFrequency() {
-    const value =
-        Number.parseInt(
-            txtFrequency.value,
-            10
+    let value =
+        Number.parseFloat(
+            txtFrequency.value
         );
 
     if (
         !Number.isFinite(value) ||
         value < minFreq
     ) {
-        txtFrequency.value =
-            String(minFreq);
-
-        return;
+        value =
+            minFreq;
     }
 
-    if (value > maxFreq) {
-        txtFrequency.value =
-            String(maxFreq);
+    if (
+        value >
+        maxFreq + 0.99
+    ) {
+        value =
+            maxFreq + 0.99;
+    }
+
+    /*
+     * Keep frequencies to two decimal places.
+     */
+    value =
+        Math.round(
+            value * 100
+        ) / 100;
+
+    txtFrequency.value =
+        value.toFixed(2);
+
+    if (
+        typeof tuneNetworkFrequency ===
+            "function"
+    ) {
+        tuneNetworkFrequency(
+            value
+        );
+    }
+
+    if (
+        typeof updateNetworkRegistration ===
+            "function"
+    ) {
+        updateNetworkRegistration();
     }
 }
 
