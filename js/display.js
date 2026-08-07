@@ -1174,6 +1174,39 @@ function getCurrentAudioAmplitude() {
  *
  * @param {number} amplitude
  */
+
+function getFrequencyDecimalOffset() {
+    const frequency =
+        Number.parseFloat(
+            txtFrequency.value
+        );
+
+    if (
+        !Number.isFinite(
+            frequency
+        )
+    ) {
+        return 0;
+    }
+
+    const whole =
+        Math.floor(
+            frequency
+        );
+
+    const decimal =
+        frequency -
+        whole;
+
+    return Math.max(
+        0,
+        Math.min(
+            0.99,
+            decimal
+        )
+    );
+}
+
 function drawSignalMeter(amplitude) {
     meterCtx.clearRect(
         0,
@@ -1365,6 +1398,216 @@ function drawSignalMeter(amplitude) {
     );
 
     meterCtx.stroke();
+}
+
+function drawFrequencyOffsetMeter() {
+    if (
+        !canvasOffsetMeter ||
+        !offsetMeterCtx
+    ) {
+        return;
+    }
+
+    const width =
+        canvasOffsetMeter.width;
+
+    const height =
+        canvasOffsetMeter.height;
+
+    offsetMeterCtx.clearRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    /*
+     * Background.
+     */
+    offsetMeterCtx.fillStyle =
+        "#090909";
+
+    offsetMeterCtx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    /*
+     * Title.
+     */
+    offsetMeterCtx.fillStyle =
+        "#AAAAAA";
+
+    offsetMeterCtx.font =
+        "bold 9px Consolas";
+
+    offsetMeterCtx.textAlign =
+        "center";
+
+    offsetMeterCtx.fillText(
+        "CHANNEL OFFSET",
+        width / 2,
+        11
+    );
+
+    /*
+     * Meter line.
+     */
+    const left =
+        18;
+
+    const right =
+        width - 18;
+
+    const y =
+        50;
+
+    offsetMeterCtx.strokeStyle =
+        "#777777";
+
+    offsetMeterCtx.lineWidth =
+        2;
+
+    offsetMeterCtx.beginPath();
+
+    offsetMeterCtx.moveTo(
+        left,
+        y
+    );
+
+    offsetMeterCtx.lineTo(
+        right,
+        y
+    );
+
+    offsetMeterCtx.stroke();
+
+    /*
+     * Major markers.
+     */
+    const positions = [
+        {
+            value: 0.00,
+            label: ".00"
+        },
+        {
+            value: 0.25,
+            label: ".25"
+        },
+        {
+            value: 0.50,
+            label: ".50"
+        },
+        {
+            value: 0.75,
+            label: ".75"
+        },
+        {
+            value: 0.99,
+            label: ".99"
+        }
+    ];
+
+    offsetMeterCtx.font =
+        "8px Consolas";
+
+    offsetMeterCtx.fillStyle =
+        "#AAAAAA";
+
+    for (
+        const marker of
+        positions
+    ) {
+        const normalized =
+            marker.value /
+            0.99;
+
+        const x =
+            left +
+            normalized *
+                (
+                    right -
+                    left
+                );
+
+        offsetMeterCtx.beginPath();
+
+        offsetMeterCtx.moveTo(
+            x,
+            y - 5
+        );
+
+        offsetMeterCtx.lineTo(
+            x,
+            y + 5
+        );
+
+        offsetMeterCtx.stroke();
+
+        offsetMeterCtx.fillText(
+            marker.label,
+            x,
+            y + 17
+        );
+    }
+
+    /*
+     * Current decimal position.
+     */
+    const decimalOffset =
+        getFrequencyDecimalOffset();
+
+    const normalizedOffset =
+        decimalOffset /
+        0.99;
+
+    const needleX =
+        left +
+        normalizedOffset *
+            (
+                right -
+                left
+            );
+
+    /*
+     * Needle.
+     */
+    offsetMeterCtx.strokeStyle =
+        "#00FFFF";
+
+    offsetMeterCtx.lineWidth =
+        2;
+
+    offsetMeterCtx.beginPath();
+
+    offsetMeterCtx.moveTo(
+        needleX,
+        y - 20
+    );
+
+    offsetMeterCtx.lineTo(
+        needleX,
+        y + 6
+    );
+
+    offsetMeterCtx.stroke();
+
+    /*
+     * Exact decimal readout.
+     */
+    offsetMeterCtx.fillStyle =
+        "#00FFFF";
+
+    offsetMeterCtx.font =
+        "bold 10px Consolas";
+
+    offsetMeterCtx.fillText(
+        decimalOffset.toFixed(2),
+        width / 2,
+        82
+    );
 }
 
 /**
@@ -2002,6 +2245,8 @@ function renderUIFrame() {
     drawSignalMeter(
         amplitude
     );
+
+    drawFrequencyOffsetMeter();
 
     if (isScopeMode) {
         drawSpectrumScope(
