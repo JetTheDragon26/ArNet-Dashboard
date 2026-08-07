@@ -877,7 +877,7 @@ async function handleNetworkMessage(
         message.type
     ) {
 
-       case "spectrum-pulse": {
+      case "spectrum-activity": {
     const incomingMode =
         String(
             message.mode ||
@@ -919,6 +919,102 @@ async function handleNetworkMessage(
         break;
     }
 
+    networkSpectrumSignals =
+        Array.isArray(
+            message.signals
+        )
+            ? message.signals
+                .map(
+                    signal => ({
+                        key:
+                            [
+                                Number(
+                                    signal.frequency
+                                ),
+
+                                String(
+                                    signal.callsign ||
+                                    "UNKNOWN"
+                                ),
+
+                                String(
+                                    signal.transmissionKind ||
+                                    "audio"
+                                )
+                            ].join("|"),
+
+                        frequency:
+                            Number(
+                                signal.frequency
+                            ),
+
+                        callsign:
+                            String(
+                                signal.callsign ||
+                                "UNKNOWN"
+                            ),
+
+                        transmissionKind:
+                            String(
+                                signal.transmissionKind ||
+                                "audio"
+                            )
+                                .trim()
+                                .toLowerCase(),
+
+                        strength:
+                            Math.max(
+                                0.1,
+                                Math.min(
+                                    1,
+                                    Number(
+                                        signal.strength
+                                    ) ||
+                                    0.75
+                                )
+                            ),
+
+                        width:
+                            Math.max(
+                                1,
+                                Math.min(
+                                    30,
+                                    Number(
+                                        signal.width
+                                    ) ||
+                                    5
+                                )
+                            ),
+
+                        startedAt:
+                            Number(
+                                signal.startedAt
+                            ) ||
+                            Date.now(),
+
+                        expiresAt:
+                            Number(
+                                signal.expiresAt
+                            ) ||
+                            (
+                                Date.now() +
+                                30000
+                            )
+                    })
+                )
+                .filter(
+                    signal =>
+                        Number.isFinite(
+                            signal.frequency
+                        )
+                )
+            : [];
+
+    networkSpectrumLastUpdate =
+        Date.now();
+
+    break;
+}
     const frequency =
         Number(
             message.frequency
