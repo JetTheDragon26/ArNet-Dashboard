@@ -702,7 +702,7 @@ async function prepareArNetAudioStream(
         typeof audioBlob.name ===
             "string"
             ? audioBlob.name
-            : "audio-stream";
+            : "audio";
 
     const mimeType =
         audioBlob.type ||
@@ -716,7 +716,7 @@ async function prepareArNetAudioStream(
             2,
 
         transmissionKind:
-            "audio-stream",
+            "audio",
 
         codec:
             "pcm16",
