@@ -1066,10 +1066,28 @@ function getPcmRms(
  */
 function getCurrentAudioAmplitude() {
     if (
-    serviceAudioAmplitude >
+        typeof getIncomingArNetStreamAmplitude ===
+            "function"
+    ) {
+        const streamAmplitude =
+            getIncomingArNetStreamAmplitude();
+
+        if (
+            streamAmplitude >
+            0.005
+        ) {
+            return streamAmplitude;
+        }
+    }
+
+    if (
+        serviceAudioAmplitude >
         0
-) {
-    return serviceAudioAmplitude;
+    ) {
+        return serviceAudioAmplitude;
+    
+
+    // Existing recording/playback logic continues...
 }
     if (isRecording) {
         const carrierValue =
