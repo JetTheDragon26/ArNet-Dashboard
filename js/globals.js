@@ -196,6 +196,9 @@ const imgWaterfall =
 const canvasMeter =
     document.getElementById("canvasMeter");
 
+const canvasOffsetMeter =
+    document.getElementById("canvasOffsetMeter");
+
 // ---------- Canvas Contexts ----------
 const scopeCtx =
     canvasScope.getContext("2d");
@@ -205,6 +208,9 @@ const wfCtx =
 
 const meterCtx =
     canvasMeter.getContext("2d");
+
+const offsetMeterCtx =
+    canvasOffsetMeter.getContext("2d");
 
 // ---------- Waterfall Buffer ----------
 const wfWidth = 160;
