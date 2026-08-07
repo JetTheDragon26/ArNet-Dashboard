@@ -877,7 +877,7 @@ async function handleNetworkMessage(
         message.type
     ) {
 
-        case "spectrum-activity": {
+       case "spectrum-pulse": {
     const incomingMode =
         String(
             message.mode ||
@@ -919,82 +919,107 @@ async function handleNetworkMessage(
         break;
     }
 
-    networkSpectrumSignals =
-        Array.isArray(
-            message.signals
+    const frequency =
+        Number(
+            message.frequency
+        );
+
+    if (
+        !Number.isFinite(
+            frequency
         )
-            ? message.signals
-                .map(
-                    signal => ({
-                        frequency:
-                            Number(
-                                signal.frequency
-                            ),
+    ) {
+        break;
+    }
 
-                        callsign:
-                            String(
-                                signal.callsign ||
-                                "UNKNOWN"
-                            ),
+    const callsign =
+        String(
+            message.callsign ||
+            "UNKNOWN"
+        );
 
-                        transmissionKind:
-                            String(
-                                signal.transmissionKind ||
-                                "audio"
-                            )
-                                .trim()
-                                .toLowerCase(),
+    const transmissionKind =
+        String(
+            message.transmissionKind ||
+            "audio"
+        )
+            .trim()
+            .toLowerCase();
 
-                        strength:
-                            Math.max(
-                                0,
-                                Math.min(
-                                    1,
-                                    Number(
-                                        signal.strength
-                                    ) ||
-                                    0.5
-                                )
-                            ),
+    const signalKey =
+        [
+            frequency,
+            callsign,
+            transmissionKind
+        ].join("|");
 
-                        width:
-                            Math.max(
-                                1,
-                                Math.min(
-                                    30,
-                                    Number(
-                                        signal.width
-                                    ) ||
-                                    5
-                                )
-                            ),
+    const signal = {
+        key:
+            signalKey,
 
-                        startedAt:
-                            Number(
-                                signal.startedAt
-                            ) ||
-                            Date.now(),
+        frequency,
 
-                        expiresAt:
-                            Number(
-                                signal.expiresAt
-                            ) ||
-                            (
-                                Date.now() +
-                                30000
-                            )
-                    })
+        callsign,
+
+        transmissionKind,
+
+        strength:
+            Math.max(
+                0.1,
+                Math.min(
+                    1,
+                    Number(
+                        message.strength
+                    ) ||
+                    0.75
                 )
-                .filter(
-                    signal =>
-                        Number.isFinite(
-                            signal.frequency
-                        )
-                )
-            : [];
+            ),
+
+        startedAt:
+            Number(
+                message.startedAt
+            ) ||
+            Date.now(),
+
+        expiresAt:
+            Number(
+                message.expiresAt
+            ) ||
+            (
+                Date.now() +
+                30000
+            )
+    };
+
+    const existingIndex =
+        networkSpectrumSignals
+            .findIndex(
+                existing =>
+                    existing.key ===
+                    signalKey
+            );
+
+    if (
+        existingIndex >= 0
+    ) {
+        networkSpectrumSignals[
+            existingIndex
+        ] =
+            signal;
+    }
+    else {
+        networkSpectrumSignals.push(
+            signal
+        );
+    }
 
     networkSpectrumLastUpdate =
         Date.now();
+
+    console.log(
+        "[ArNet Spectrum] Signal:",
+        signal
+    );
 
     break;
 }
