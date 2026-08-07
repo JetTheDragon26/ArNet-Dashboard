@@ -989,21 +989,29 @@ function drawWaterfallRow(
      * Ignore old spectrum data if the relay has not sent
      * an update recently.
      */
-    const spectrumIsFresh =
-        typeof networkSpectrumLastUpdate ===
-            "number" &&
-        now -
-            networkSpectrumLastUpdate <
-            3000;
+  if (
+    Array.isArray(
+        networkSpectrumSignals
+    )
+) {
+    networkSpectrumSignals =
+        networkSpectrumSignals
+            .filter(
+                signal =>
+                    Number(
+                        signal.expiresAt
+                    ) >
+                    now
+            );
+}
 
-    const activeSignals =
-        spectrumIsFresh &&
-        Array.isArray(
-            networkSpectrumSignals
-        )
-            ? networkSpectrumSignals
-            : [];
-
+const activeSignals =
+    Array.isArray(
+        networkSpectrumSignals
+    )
+        ? networkSpectrumSignals
+        : [];
+    
     const tunedFrequency =
         Number.parseInt(
             txtFrequency?.value,
@@ -1022,8 +1030,9 @@ function drawWaterfallRow(
         x++
     ) {
         const noise =
-            Math.random() *
-            0.035;
+    0.018 +
+    Math.random() *
+    0.055;
 
         let networkIntensity =
             0;
