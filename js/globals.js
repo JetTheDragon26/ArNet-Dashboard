@@ -99,6 +99,9 @@ const comboMode =
 const comboBand =
     document.getElementById("comboBand");
 
+const comboChannelSector =
+    document.getElementById("comboChannelSector");
+
 const comboBandwidth =
     document.getElementById("comboBandwidth");
 
