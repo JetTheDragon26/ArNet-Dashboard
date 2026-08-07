@@ -333,7 +333,7 @@ function connectArNetNetwork() {
                     comboBand.value,
 
                 bandwidth:
-                    comboBandwidth.value
+                    comboBandwidth.value,
 
                channelSector:
                   getNetworkChannelSector(),
