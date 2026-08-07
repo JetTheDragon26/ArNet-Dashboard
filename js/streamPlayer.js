@@ -12,105 +12,38 @@ const ARNET_STREAM_SCHEDULE_AHEAD_SECONDS =
 const incomingArNetStreams =
     new Map();
 
-let arnetIncomingStreamAnalyser =
+let incomingArNetStreamAmplitude =
+    0;
+
+let incomingArNetStreamVisualTimeout =
     null;
 
-let arnetIncomingStreamAnalyserData =
-    null;
+function getIncomingArNetStreamAmplitude() {
+    return incomingArNetStreamAmplitude;
+}
 
-let arnetIncomingStreamAnalyserSink =
-    null;
-
-//====================================
-//-----------------------------------
-//====================================
-
-function initializeIncomingStreamAnalyser() {
-    if (!audioCtx) {
-        return;
-    }
-
-    /*
-     * Recreate the analyser if the AudioContext changed.
-     */
+function updateIncomingArNetStreamAmplitude(
+    samples,
+    durationMs = 200
+) {
     if (
-        arnetIncomingStreamAnalyser &&
-        arnetIncomingStreamAnalyser.context ===
-            audioCtx
+        !samples ||
+        samples.length === 0
     ) {
         return;
     }
-
-    arnetIncomingStreamAnalyser =
-        audioCtx.createAnalyser();
-
-    arnetIncomingStreamAnalyser.fftSize =
-        512;
-
-    arnetIncomingStreamAnalyser
-        .smoothingTimeConstant =
-        0.72;
-
-    arnetIncomingStreamAnalyserData =
-        new Uint8Array(
-            arnetIncomingStreamAnalyser
-                .fftSize
-        );
-
-    /*
-     * Silent output keeps the analyser active without
-     * sending a second copy of the audio to the speakers.
-     */
-    arnetIncomingStreamAnalyserSink =
-        audioCtx.createGain();
-
-    arnetIncomingStreamAnalyserSink.gain.value =
-        0;
-
-    arnetIncomingStreamAnalyser.connect(
-        arnetIncomingStreamAnalyserSink
-    );
-
-    arnetIncomingStreamAnalyserSink.connect(
-        audioCtx.destination
-    );
-}
-
-function getIncomingArNetStreamAmplitude() {
-    if (
-    !audioCtx ||
-    !arnetIncomingStreamAnalyser ||
-    !arnetIncomingStreamAnalyserData ||
-    arnetIncomingStreamAnalyser.context !==
-        audioCtx ||
-    incomingArNetStreams.size ===
-        0
-) {
-    return 0;
-}
-
-    arnetIncomingStreamAnalyser
-        .getByteTimeDomainData(
-            arnetIncomingStreamAnalyserData
-        );
 
     let sumSquared =
         0;
 
     for (
         let index = 0;
-        index <
-            arnetIncomingStreamAnalyserData.length;
+        index < samples.length;
         index++
     ) {
         const normalized =
-            (
-                arnetIncomingStreamAnalyserData[
-                    index
-                ] -
-                128
-            ) /
-            128;
+            samples[index] /
+            32768;
 
         sumSquared +=
             normalized *
@@ -120,22 +53,46 @@ function getIncomingArNetStreamAmplitude() {
     const rms =
         Math.sqrt(
             sumSquared /
-            arnetIncomingStreamAnalyserData
-                .length
+            samples.length
         );
 
-    /*
-     * Raise the visual level without clipping it.
-     */
-    return Math.max(
-        0,
-        Math.min(
-            1,
-            rms *
-                3.5
-        )
-    );
+    incomingArNetStreamAmplitude =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                rms *
+                    4
+            )
+        );
+
+    if (
+        incomingArNetStreamVisualTimeout
+    ) {
+        clearTimeout(
+            incomingArNetStreamVisualTimeout
+        );
+    }
+
+    incomingArNetStreamVisualTimeout =
+        setTimeout(
+            () => {
+                incomingArNetStreamAmplitude =
+                    0;
+            },
+            Math.max(
+                250,
+                durationMs +
+                    100
+            )
+        );
 }
+
+//====================================
+//-----------------------------------
+//====================================
+
+
 
 // ======================================================
 // Base64 and PCM helpers
@@ -280,8 +237,6 @@ async function beginIncomingArNetStream(
     ) {
         await audioCtx.resume();
     }
-
-    initializeIncomingStreamAnalyser();
 
     stopIncomingArNetStream(
         message.streamId
@@ -430,6 +385,8 @@ async function receiveIncomingArNetStreamChunk(
                 bytes
             );
 
+        
+
         stream.chunks.set(
             sequence,
             {
@@ -459,6 +416,25 @@ async function receiveIncomingArNetStreamChunk(
             "Incoming stream chunk failed:",
             error
         );
+    }
+}
+
+function clearIncomingArNetStreamVisuals() {
+    incomingArNetStreamAmplitude =
+        0;
+
+    serviceAudioAmplitude =
+        0;
+
+    if (
+        incomingArNetStreamVisualTimeout
+    ) {
+        clearTimeout(
+            incomingArNetStreamVisualTimeout
+        );
+
+        incomingArNetStreamVisualTimeout =
+            null;
     }
 }
 
@@ -652,17 +628,6 @@ source.connect(
     audioCtx.destination
 );
 
-/*
- * Separate silent measurement path.
- */
-if (
-    arnetIncomingStreamAnalyser
-) {
-    source.connect(
-        arnetIncomingStreamAnalyser
-    );
-}
-
     const startTime =
         Math.max(
             audioCtx.currentTime +
@@ -738,9 +703,7 @@ function finishIncomingArNetStream(
     incomingArNetStreams.size ===
     0
 ) {
-    serviceAudioAmplitude =
-        0;
-    }
+    clearIncomingArNetStreamVisuals();
 }
 
     setStreamPlayerStatus(
@@ -791,8 +754,7 @@ function stopIncomingArNetStream(
     incomingArNetStreams.size ===
     0
 ) {
-    serviceAudioAmplitude =
-        0;
+    clearIncomingArNetStreamVisuals();
 }
 
 
