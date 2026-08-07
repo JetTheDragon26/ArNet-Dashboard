@@ -99,6 +99,88 @@ function createActionButton(
     return button;
 }
 
+function fineTuneFrequency(
+    delta
+) {
+    let current =
+        Number.parseFloat(
+            txtFrequency.value
+        );
+
+    if (
+        !Number.isFinite(
+            current
+        )
+    ) {
+        current =
+            minFreq;
+    }
+
+    let next =
+        current +
+        delta;
+
+    const minimum =
+        Number(
+            minFreq
+        );
+
+    const maximum =
+        Number(
+            maxFreq
+        ) +
+        0.99;
+
+    next =
+        Math.max(
+            minimum,
+            Math.min(
+                maximum,
+                next
+            )
+        );
+
+    next =
+        Math.round(
+            next *
+            100
+        ) /
+        100;
+
+    txtFrequency.value =
+        next.toFixed(2);
+
+    if (
+        typeof stopAllIncomingArNetStreams ===
+            "function"
+    ) {
+        stopAllIncomingArNetStreams();
+    }
+
+    if (
+        typeof tuneNetworkFrequency ===
+            "function"
+    ) {
+        tuneNetworkFrequency(
+            next
+        );
+    }
+
+    if (
+        typeof updateNetworkRegistration ===
+            "function"
+    ) {
+        updateNetworkRegistration();
+    }
+
+    if (
+        typeof updateArNetWaterfallControls ===
+            "function"
+    ) {
+        updateArNetWaterfallControls();
+    }
+}
+
 // ======================================================
 // Additional AMMEF/media controls
 // ======================================================
@@ -868,6 +950,36 @@ txtCallsign.addEventListener(
     "blur",
     updateNetworkRegistration
 );
+
+    const btnTuneDownBig =
+    document.getElementById(
+        "btnTuneDownBig"
+    );
+
+const btnTuneDownMedium =
+    document.getElementById(
+        "btnTuneDownMedium"
+    );
+
+const btnTuneDownSmall =
+    document.getElementById(
+        "btnTuneDownSmall"
+    );
+
+const btnTuneUpSmall =
+    document.getElementById(
+        "btnTuneUpSmall"
+    );
+
+const btnTuneUpMedium =
+    document.getElementById(
+        "btnTuneUpMedium"
+    );
+
+const btnTuneUpBig =
+    document.getElementById(
+        "btnTuneUpBig"
+    );
 
 txtCallsign.addEventListener(
     "keydown",
