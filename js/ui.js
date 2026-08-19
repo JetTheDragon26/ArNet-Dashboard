@@ -992,10 +992,14 @@ function initializeUIControls() {
         openMediaPicker
     );
 
+   if (
+    btnToggleDisplay
+) {
     btnToggleDisplay.addEventListener(
         "click",
         toggleDisplayMode
     );
+}
 
     sliderCarrier.addEventListener(
         "input",
