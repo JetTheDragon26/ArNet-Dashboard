@@ -406,12 +406,6 @@ function initializeArNetWaterfallControls() {
                     rectangle.left;
 
                 const frequency =
-                    waterfallXToFrequency(
-                        x,
-                        rectangle.width
-                    );
-
-                const frequency =
     waterfallXToFrequency(
         x,
         rectangle.width
