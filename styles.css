@@ -591,3 +591,308 @@ button:disabled {
     opacity: 0.3;
     filter: grayscale(1);
 }
+
+/* ==================================================
+   ArNet SDR Lower Control Deck
+================================================== */
+
+.arnet-control-deck {
+    background: #040805;
+    border: 1px solid #18351e;
+    padding: 6px;
+}
+
+.arnet-control-row {
+    display: grid;
+
+    grid-template-columns:
+        1.35fr
+        1fr
+        0.8fr
+        0.55fr;
+
+    gap: 6px;
+}
+
+.arnet-control-group {
+    background: #070d08;
+    border: 1px solid #18351e;
+
+    padding: 6px;
+
+    min-width: 0;
+}
+
+.arnet-control-title {
+    color: #52795a;
+
+    font-family: Consolas, monospace;
+    font-size: 8px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 6px;
+}
+
+.arnet-rig-button {
+    background: #09130b;
+    color: #72d987;
+
+    border: 1px solid #285432;
+    border-radius: 2px;
+
+    min-height: 25px;
+
+    padding: 3px 8px;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.arnet-rig-button:hover:not(:disabled) {
+    background: #102316;
+    color: #9af0aa;
+
+    border-color: #438651;
+}
+
+.arnet-rig-button:disabled {
+    opacity: 0.28;
+    cursor: not-allowed;
+}
+
+.arnet-ptt-button {
+    width: 100%;
+
+    color: #8fe69e;
+
+    font-size: 11px;
+}
+
+.arnet-stream-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1fr
+        0.7fr;
+
+    gap: 4px;
+
+    margin-top: 5px;
+}
+
+.arnet-station-row {
+    display: grid;
+
+    grid-template-columns:
+        70px
+        1fr
+        auto;
+
+    align-items: center;
+
+    gap: 4px;
+
+    margin-bottom: 5px;
+}
+
+.arnet-station-row:last-child {
+    margin-bottom: 0;
+}
+
+.arnet-small-label {
+    color: #557c5d;
+
+    font-family: Consolas, monospace;
+    font-size: 8px;
+    font-weight: bold;
+}
+
+.arnet-rig-input,
+.arnet-rig-select {
+    background: #020503 !important;
+    color: #82db92 !important;
+
+    border: 1px solid #24492c !important;
+
+    min-height: 25px;
+
+    font-family: Consolas, monospace;
+    font-size: 10px;
+}
+
+.arnet-rig-input {
+    padding: 2px 6px;
+}
+
+.arnet-callsign-input {
+    text-align: center;
+    font-weight: bold;
+}
+
+.arnet-carrier-readout {
+    display: flex;
+    justify-content: space-between;
+
+    color: #557c5d;
+
+    font-size: 9px;
+
+    margin-bottom: 5px;
+}
+
+.arnet-carrier-readout strong {
+    color: #8fe69e;
+}
+
+.arnet-carrier-slider {
+    width: 100%;
+
+    accent-color: #4d9b5c;
+}
+
+.arnet-utility-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.arnet-utility-group .arnet-rig-button {
+    flex-grow: 1;
+}
+
+
+/* ==================================================
+   Morse Drawer
+================================================== */
+
+.arnet-morse-drawer {
+    margin-top: 6px;
+
+    background: #030704;
+
+    border: 1px solid #1b4024;
+
+    padding: 7px;
+}
+
+.arnet-morse-drawer[hidden] {
+    display: none !important;
+}
+
+.arnet-morse-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    color: #79d78a;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 6px;
+}
+
+.arnet-small-button {
+    min-height: 20px;
+    padding: 1px 6px;
+}
+
+.arnet-morse-grid {
+    display: grid;
+
+    grid-template-columns:
+        1.2fr
+        1fr;
+
+    gap: 7px;
+}
+
+.arnet-morse-section {
+    min-width: 0;
+}
+
+.arnet-morse-output {
+    min-height: 55px;
+    max-height: 110px;
+
+    overflow-y: auto;
+
+    margin-top: 4px;
+
+    padding: 6px;
+
+    box-sizing: border-box;
+
+    background: #010301;
+
+    border: 1px solid #17351f;
+
+    color: #8fe69e;
+
+    font-family: Consolas, monospace;
+    font-size: 11px;
+
+    white-space: pre-wrap;
+}
+
+.arnet-morse-info {
+    color: #4f7257;
+
+    font-family: Consolas, monospace;
+    font-size: 8px;
+
+    margin-top: 4px;
+}
+
+.arnet-morse-tx-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        65px;
+
+    gap: 4px;
+
+    margin-top: 4px;
+}
+
+.arnet-checkbox-row {
+    display: flex;
+    align-items: center;
+
+    gap: 5px;
+
+    margin-top: 5px;
+
+    color: #617b66;
+
+    font-size: 8px;
+
+    cursor: pointer;
+}
+
+
+/* Responsive control deck */
+
+@media (
+    max-width: 850px
+) {
+    .arnet-control-row {
+        grid-template-columns:
+            1fr
+            1fr;
+    }
+
+    .arnet-morse-grid {
+        grid-template-columns:
+            1fr;
+    }
+}
