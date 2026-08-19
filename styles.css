@@ -144,16 +144,19 @@ input[type="range"] {
 
 #frequencyFineTuneControls button,
 #meterModeControls button {
-    background: #20272B;
-    color: #D8E0E4;
-    border: 1px solid #4A555C;
+    background: #09130b;
+    color: #52795a;
+    border: 1px solid #18351e;
     min-width: 38px;
     height: 22px;
-    padding: 1px 5px;
-    font-family: Consolas, monospace;
     font-size: 9px;
     font-weight: bold;
-    cursor: pointer;
+    cursor: default;
+}
+
+#meterModeControls button:first-child {
+    color: #9af0aa;
+    border-color: #2c6537;
 }
 
 #frequencyFineTuneControls button:hover,
