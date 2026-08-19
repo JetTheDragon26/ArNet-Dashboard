@@ -378,3 +378,213 @@ input[type="range"] {
 .arnet-waterfall-controls strong {
     color: #91dfa0;
 }
+
+/* ==================================================
+   ArNet Monochrome Rig Theme
+================================================== */
+
+:root {
+    --arnet-bg: #020503;
+    --arnet-panel: #070c08;
+    --arnet-panel-2: #0a110c;
+
+    --arnet-border: #18351e;
+    --arnet-border-bright: #2c6537;
+
+    --arnet-green: #72d987;
+    --arnet-green-bright: #9af0aa;
+    --arnet-green-dim: #52795a;
+
+    --arnet-text: #aab7ad;
+    --arnet-muted: #66736a;
+
+    --arnet-tx: #e24a4a;
+    --arnet-yellow: #d8d52a;
+}
+
+
+/* Main app shell */
+
+body {
+    background: #000 !important;
+    color: var(--arnet-text);
+}
+
+.window {
+    background: #010201 !important;
+
+    border-color:
+        var(--arnet-border) !important;
+}
+
+
+/* Generic boxes */
+
+.border-box {
+    background:
+        var(--arnet-panel) !important;
+
+    border-color:
+        var(--arnet-border) !important;
+
+    border-radius: 2px;
+}
+
+
+/* SDR header */
+
+.arnet-sdr-header {
+    background:
+        linear-gradient(
+            180deg,
+            #0b110c 0%,
+            #040704 100%
+        ) !important;
+
+    border-color:
+        var(--arnet-border) !important;
+}
+
+
+/* Analog meter box */
+
+#meterContainer,
+#offsetMeterContainer {
+    background:
+        #020503 !important;
+
+    border-color:
+        var(--arnet-border) !important;
+}
+
+
+/* Frequency */
+
+#txtFrequency {
+    color:
+        var(--arnet-green-bright) !important;
+
+    background:
+        #010301 !important;
+
+    border-color:
+        var(--arnet-border-bright) !important;
+
+    text-shadow:
+        0 0 8px
+        rgba(
+            100,
+            240,
+            130,
+            0.25
+        );
+
+    box-shadow:
+        inset 0 0 14px
+        rgba(
+            50,
+            150,
+            70,
+            0.1
+        ) !important;
+}
+
+
+/* Mode / band / sector */
+
+#comboMode,
+#comboBand,
+#comboChannelSector,
+#comboBandwidth {
+    background:
+        #08100a !important;
+
+    color:
+        var(--arnet-green) !important;
+
+    border:
+        1px solid
+        var(--arnet-border-bright) !important;
+}
+
+
+/* Fine tune buttons */
+
+#frequencyFineTuneControls button {
+    background:
+        #09130b !important;
+
+    color:
+        var(--arnet-green) !important;
+
+    border:
+        1px solid
+        var(--arnet-border-bright) !important;
+
+    border-radius: 2px;
+}
+
+#frequencyFineTuneControls button:hover {
+    background:
+        #102316 !important;
+
+    color:
+        var(--arnet-green-bright) !important;
+
+    border-color:
+        #438651 !important;
+}
+
+
+/* Meter title */
+
+#txtMeterMode {
+    color:
+        var(--arnet-green) !important;
+}
+
+
+/* Help */
+
+#btnDashboardHelp {
+    background:
+        #09130b !important;
+
+    color:
+        var(--arnet-green) !important;
+
+    border-color:
+        var(--arnet-border-bright) !important;
+}
+
+
+/* Normal form inputs */
+
+input[type="text"] {
+    background:
+        #050906;
+
+    color:
+        var(--arnet-green);
+
+    border:
+        1px solid
+        var(--arnet-border);
+}
+
+
+/* Generic working buttons */
+
+button:not(:disabled) {
+    font-family:
+        Consolas,
+        monospace;
+}
+
+
+/* Disabled controls */
+
+button:disabled {
+    opacity: 0.3;
+    filter: grayscale(1);
+}
