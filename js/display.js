@@ -1993,10 +1993,9 @@ const activeSignals =
         : [];
     
     const tunedFrequency =
-        Number.parseInt(
-            txtFrequency?.value,
-            10
-        );
+    Number.parseFloat(
+        txtFrequency?.value
+    );
 
     const tunedX =
         frequencyToWaterfallX(
@@ -2254,11 +2253,10 @@ function renderUIFrame() {
         currentAmplitude;
 
     const isTransmitting =
-        (
-            isRecording ||
-            isPlaying ||
-            amplitude > 0.08
-        );
+    (
+        isRecording ||
+        isPlaying
+    );
 
     const isAbmtvMode =
         comboMode.value ===
