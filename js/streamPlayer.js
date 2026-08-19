@@ -15,10 +15,57 @@ const incomingArNetStreams =
 let incomingArNetStreamAmplitude =
     0;
 
+let incomingArNetAudioAnalyser =
+    null;
+
+let incomingArNetAnalyserBuffer =
+    null;
+
 let incomingArNetStreamVisualTimeout =
     null;
 
 function getIncomingArNetStreamAmplitude() {
+    if (
+        incomingArNetAudioAnalyser &&
+        incomingArNetAnalyserBuffer
+    ) {
+        incomingArNetAudioAnalyser
+            .getFloatTimeDomainData(
+                incomingArNetAnalyserBuffer
+            );
+
+        let sumSquared =
+            0;
+
+        for (
+            let i = 0;
+            i <
+            incomingArNetAnalyserBuffer.length;
+            i++
+        ) {
+            const sample =
+                incomingArNetAnalyserBuffer[i];
+
+            sumSquared +=
+                sample *
+                sample;
+        }
+
+        const rms =
+            Math.sqrt(
+                sumSquared /
+                incomingArNetAnalyserBuffer.length
+            );
+
+        return Math.max(
+            0,
+            Math.min(
+                1,
+                rms * 4
+            )
+        );
+    }
+
     return incomingArNetStreamAmplitude;
 }
 
@@ -751,8 +798,31 @@ lowPass.connect(
     detuneGain
 );
 
+if (
+    !incomingArNetAudioAnalyser
+) {
+    incomingArNetAudioAnalyser =
+        audioCtx.createAnalyser();
+
+    incomingArNetAudioAnalyser.fftSize =
+        256;
+
+    incomingArNetAudioAnalyser.smoothingTimeConstant =
+        0.25;
+
+    incomingArNetAnalyserBuffer =
+        new Float32Array(
+            incomingArNetAudioAnalyser
+                .fftSize
+        );
+
+    incomingArNetAudioAnalyser.connect(
+        audioCtx.destination
+    );
+}
+
 detuneGain.connect(
-    audioCtx.destination
+    incomingArNetAudioAnalyser
 );
 
     const startTime =
