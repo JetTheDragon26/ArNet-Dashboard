@@ -912,116 +912,32 @@ wfCtx.fillText(
     wfCtx.restore();
 }
 
-function drawArNetWaterfallTunedMarker() {
-    const tunedFrequency =
-        Number.parseFloat(
-            txtFrequency?.value
+if (
+    !incomingArNetAudioAnalyser
+) {
+    incomingArNetAudioAnalyser =
+        audioCtx.createAnalyser();
+
+    incomingArNetAudioAnalyser.fftSize =
+        256;
+
+    incomingArNetAudioAnalyser.smoothingTimeConstant =
+        0.25;
+
+    incomingArNetAnalyserBuffer =
+        new Float32Array(
+            incomingArNetAudioAnalyser
+                .fftSize
         );
 
-    if (
-        !Number.isFinite(
-            tunedFrequency
-        )
-    ) {
-        return;
-    }
-
-    const range =
-        getCurrentWaterfallBandRange();
-
-    if (
-        tunedFrequency <
-            range.min ||
-        tunedFrequency >
-            range.max
-    ) {
-        return;
-    }
-
-    const x =
-        frequencyToWaterfallX(
-            tunedFrequency,
-            imgWaterfall.width
-        );
-
-    wfCtx.save();
-
-    wfCtx.strokeStyle =
-        "#00FFFF";
-
-    wfCtx.lineWidth =
-        1;
-
-    wfCtx.beginPath();
-
-    wfCtx.moveTo(
-        x,
-        0
+    incomingArNetAudioAnalyser.connect(
+        audioCtx.destination
     );
-
-    wfCtx.lineTo(
-        x,
-        imgWaterfall.height
-    );
-
-    wfCtx.stroke();
-
-    const label =
-    `${tunedFrequency.toFixed(2)} Vt`;
-
-    wfCtx.font =
-        "bold 9px Consolas";
-
-    const labelWidth =
-        wfCtx.measureText(
-            label
-        ).width +
-        8;
-
-    const labelX =
-        Math.max(
-            0,
-            Math.min(
-                imgWaterfall.width -
-                    labelWidth,
-                x -
-                    labelWidth /
-                        2
-            )
-        );
-
-    wfCtx.fillStyle =
-        "rgba(0, 18, 24, 0.9)";
-
-    wfCtx.fillRect(
-        labelX,
-        imgWaterfall.height -
-            15,
-        labelWidth,
-        14
-    );
-
-    wfCtx.fillStyle =
-        "#00FFFF";
-
-    wfCtx.textAlign =
-        "center";
-
-    wfCtx.textBaseline =
-        "middle";
-
-    wfCtx.fillText(
-        label,
-        labelX +
-            labelWidth /
-                2,
-        imgWaterfall.height -
-            8
-    );
-
-    wfCtx.restore();
 }
 
+detuneGain.connect(
+    incomingArNetAudioAnalyser
+);
 /**
  * Calculates the RMS level of the current PCM playback
  * around a specific elapsed time.
