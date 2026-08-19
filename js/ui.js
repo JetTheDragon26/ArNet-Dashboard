@@ -147,8 +147,49 @@ function fineTuneFrequency(
         ) /
         100;
 
-    txtFrequency.value =
-        next.toFixed(2);
+    const sectorClamped =
+    typeof clampFrequencyToArNetSector ===
+        "function"
+        ? clampFrequencyToArNetSector(
+            next
+        )
+        : next;
+
+if (
+    Number.isFinite(
+        sectorClamped
+    )
+) {
+    next =
+        sectorClamped;
+}
+
+    let selectedFrequency =
+    frequency;
+
+if (
+    typeof clampFrequencyToArNetSector ===
+        "function"
+) {
+    const clamped =
+        clampFrequencyToArNetSector(
+            frequency
+        );
+
+    if (
+        Number.isFinite(
+            clamped
+        )
+    ) {
+        selectedFrequency =
+            clamped;
+    }
+}
+
+txtFrequency.value =
+    selectedFrequency.toFixed(
+        2
+    );
 
     if (
         typeof stopAllIncomingArNetStreams ===
@@ -957,6 +998,37 @@ txtCallsign.addEventListener(
     comboChannelSector.addEventListener(
         "change",
         () => {
+            const currentFrequency =
+                Number.parseFloat(
+                    txtFrequency.value
+                );
+
+            const centeredFrequency =
+                getArNetSectorCenterFrequency(
+                    currentFrequency,
+                    comboChannelSector.value
+                );
+
+            if (
+                Number.isFinite(
+                    centeredFrequency
+                )
+            ) {
+                txtFrequency.value =
+                    centeredFrequency.toFixed(
+                        2
+                    );
+
+                if (
+                    typeof tuneNetworkFrequency ===
+                        "function"
+                ) {
+                    tuneNetworkFrequency(
+                        centeredFrequency
+                    );
+                }
+            }
+
             if (
                 typeof updateNetworkRegistration ===
                     "function"
