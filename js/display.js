@@ -2368,20 +2368,17 @@ function renderUIFrame() {
 
     drawFrequencyOffsetMeter();
 
-    if (isScopeMode) {
-        drawSpectrumScope(
-            amplitude,
-            isTransmitting,
-            isAbmtvMode
-        );
-    }
-    else {
-        drawWaterfall(
-            amplitude,
-            isTransmitting,
-            isAbmtvMode
-        );
-    }
+  drawSpectrumScope(
+    amplitude,
+    isTransmitting,
+    isAbmtvMode
+);
+
+drawWaterfall(
+    amplitude,
+    isTransmitting,
+    isAbmtvMode
+);
 
     requestAnimationFrame(
         renderUIFrame
