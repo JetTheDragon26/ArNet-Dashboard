@@ -15,375 +15,456 @@
 
 <body>
     <main class="window" id="app">
-        <!-- Top radio display -->
-        <section
-    class="border-box"
+        <!-- ==================================================
+     ArNet SDR Transceiver Header
+================================================== -->
+
+<section
+    class="border-box arnet-sdr-header"
     style="
-        min-height: 130px;
-        padding: 8px;
-        box-sizing: border-box;
+        padding:8px;
+        box-sizing:border-box;
     "
 >
+    <!-- Top status strip -->
+    <div
+        style="
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            margin-bottom:7px;
+            padding:3px 6px;
+            background:#090B0D;
+            border:1px solid #222A30;
+        "
+    >
+        <div
+            style="
+                color:#B8C4CC;
+                font-size:10px;
+                font-weight:bold;
+                letter-spacing:1px;
+            "
+        >
+            ArNet SDR TRANSCEIVER
+        </div>
+
+        <div
+            style="
+                display:flex;
+                align-items:center;
+                gap:8px;
+            "
+        >
             <div
-    class="top-grid"
-    style="
-        display:grid;
-        grid-template-columns:
-            200px
-            200px
-            minmax(220px, 1fr);
-        align-items:center;
-        gap:8px;
-        width:100%;
-    "
->
-                <div
-    class="meter-container"
-    id="meterContainer"
-    style="
-        position:relative;
-        width:200px;
-        min-width:200px;
-        height:90px;
-    "
->
-                    <canvas
-                        id="canvasMeter"
-                        width="200"
-                        height="90"
-                        style="
-                            position: absolute;
-                            left: 0;
-                            top: 0;
-                        "
-                    ></canvas>
-                </div>
-
-              <div
-    id="offsetMeterContainer"
-    style="
-        position:relative;
-        width:200px;
-        height:90px;
-    "
->
-    <canvas
-        id="canvasOffsetMeter"
-        width="200"
-        height="90"
-        style="
-            position:absolute;
-            left:0;
-            top:0;
-        "
-    ></canvas>
-</div>
-                
-                <div
-    style="
-        display:flex;
-        flex-direction:column;
-        justify-content:center;
-        min-width:0;
-        padding-left:6px;
-        position:relative;
-    "
->
-                    <div
-    style="
-        display:flex;
-        align-items:center;
-        padding-right:110px;
-        min-height:22px;
-    "
->
-                        <div
-                            style="
-                                display: flex;
-                                gap: 4px;
-                            "
-                        >
-                            <select
-                                id="comboMode"
-                                style="
-                                    width: 70px;
-                                    height: 20px;
-                                    background: #222;
-                                    color: #FFCC00;
-                                    font-weight: bold;
-                                    font-size: 10px;
-                                "
-                            >
-                                <option value="AARM" selected>
-                                    AARM
-                                </option>
-
-                                <option value="ABM">
-                                    ABM
-                                </option>
-
-                                <option value="ABMTV">
-                                    ABMTV
-                                </option>
-                            </select>
-
-                            <select
-                                id="comboBand"
-                                style="
-                                    width: 105px;
-                                    height: 20px;
-                                    background: #222;
-                                    color: #00FFFF;
-                                    font-weight: bold;
-                                    font-size: 10px;
-                                "
-                            ></select>
-
-                        <select
-    id="comboChannelSector"
-    title="Channel Sector"
-    style="
-        width: 58px;
-        height: 20px;
-        background: #222;
-        color: #FF66FF;
-        font-weight: bold;
-        font-size: 10px;
-    "
->
-    <option
-        value="FCS"
-        selected
-    >
-        FCS
-    </option>
-
-    <option value="LCS">
-        LCS
-    </option>
-
-    <option value="UCS">
-        UCS
-    </option>
-</select>
-                            
-                            <div
-                                id="boxTxState"
-                                style="
-                                    background: #330000;
-                                    border-radius: 2px;
-                                    padding: 1px 4px;
-                                    display: flex;
-                                    align-items: center;
-                                    margin-left: 5px;
-                                "
-                            >
-                                <span
-                                    id="txtTxState"
-                                    style="
-                                        color: #FF3333;
-                                        font-size: 11px;
-                                        font-weight: bold;
-                                    "
-                                >
-                                    RX
-                                </span>
-                            </div>
-                        </div>
-
-<div
-    style="
-        display:flex;
-        align-items:center;
-        gap:6px;
-        position:absolute;
-        top:0;
-        right:0;
-        z-index:10;
-    "
->
-    <span
-        id="txtClock"
-        style="
-            color:#888888;
-            font-size:11px;
-        "
-    >
-        00:00:00
-    </span>
-
-    <button
-        id="btnDashboardHelp"
-        type="button"
-        title="Dashboard Help"
-        style="
-            width:22px;
-            height:22px;
-            padding:0;
-            background:#222;
-            color:#00FFFF;
-            border:1px solid #005555;
-            font-weight:bold;
-            cursor:pointer;
-        "
-    >
-        ?
-    </button>
-</div>
-                    </div>
-
-                    
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: center;
-                            align-items: center;
-                            margin-top: 4px;
-                        "
-                    >
-                        <input
-                            id="txtFrequency"
-                            type="text"
-                            value="4550.00"
-                            inputmode="decimal"
-                            autocomplete="off"
-                            style="
-                                color: #00FFFF;
-                                background: #0A0A0C;
-                                border: 1px solid #005555;
-                                font-size: 36px;
-                                font-weight: bold;
-                                text-align: right;
-                                width: 160px;
-                                height: 48px;
-                            "
-                        >
-
-                        <span
-                            style="
-                                color: #00FFFF;
-                                font-size: 20px;
-                                font-weight: bold;
-                                margin-left: 4px;
-                                align-self: flex-end;
-                                margin-bottom: 6px;
-                            "
-                        >
-                            Vt
-                        </span>
-                    </div>
-
-<div
-    id="frequencyFineTuneControls"
-    style="
-        display:flex;
-        justify-content:center;
-        align-items:center;
-        gap:5px;
-        margin-top:4px;
-        flex-wrap:wrap;
-    "
->
-    <button
-        id="btnTuneDownBig"
-        type="button"
-        title="-1.00 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        −1.00
-    </button>
-
-    <button
-        id="btnTuneDownMedium"
-        type="button"
-        title="-0.10 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        −0.10
-    </button>
-
-    <button
-        id="btnTuneDownSmall"
-        type="button"
-        title="-0.01 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        −0.01
-    </button>
-
-    <button
-        id="btnTuneUpSmall"
-        type="button"
-        title="+0.01 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        +0.01
-    </button>
-
-    <button
-        id="btnTuneUpMedium"
-        type="button"
-        title="+0.10 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        +0.10
-    </button>
-
-    <button
-        id="btnTuneUpBig"
-        type="button"
-        title="+1.00 Vt"
-        style="
-            background:#173341;
-            color:#FFFFFF;
-            border:1px solid #337799;
-            font-weight:bold;
-            cursor:pointer;
-            min-width:42px;
-        "
-    >
-        +1.00
-    </button>
-</div>
-                    
-                </div>
+                id="boxTxState"
+                style="
+                    background:#102018;
+                    border:1px solid #274A36;
+                    padding:2px 7px;
+                "
+            >
+                <span
+                    id="txtTxState"
+                    style="
+                        color:#66FF99;
+                        font-size:11px;
+                        font-weight:bold;
+                    "
+                >
+                    RX
+                </span>
             </div>
-        </section>
+
+            <span
+                id="txtClock"
+                style="
+                    color:#89949B;
+                    font-size:11px;
+                "
+            >
+                00:00:00
+            </span>
+
+            <button
+                id="btnDashboardHelp"
+                type="button"
+                title="Dashboard Help"
+                style="
+                    width:22px;
+                    height:22px;
+                    padding:0;
+                    background:#171B1E;
+                    color:#8FDBFF;
+                    border:1px solid #40505A;
+                    font-weight:bold;
+                    cursor:pointer;
+                "
+            >
+                ?
+            </button>
+        </div>
+    </div>
+
+
+    <!-- Main radio panel -->
+    <div
+        style="
+            display:grid;
+            grid-template-columns:
+                210px
+                minmax(300px,1fr)
+                210px;
+            gap:8px;
+            align-items:stretch;
+        "
+    >
+
+        <!-- ==========================================
+             MULTIFUNCTION ANALOG METER
+        =========================================== -->
+        <div
+            style="
+                background:#111416;
+                border:1px solid #343B40;
+                padding:5px;
+            "
+        >
+            <div
+                style="
+                    display:flex;
+                    justify-content:space-between;
+                    align-items:center;
+                    margin-bottom:3px;
+                "
+            >
+                <span
+                    style="
+                        color:#AEB8BE;
+                        font-size:9px;
+                        font-weight:bold;
+                    "
+                >
+                    METER
+                </span>
+
+                <span
+                    id="txtMeterMode"
+                    style="
+                        color:#FFCC55;
+                        font-size:9px;
+                        font-weight:bold;
+                    "
+                >
+                    S
+                </span>
+            </div>
+
+            <div
+                class="meter-container"
+                id="meterContainer"
+                style="
+                    position:relative;
+                    width:200px;
+                    height:90px;
+                    margin:auto;
+                "
+            >
+                <canvas
+                    id="canvasMeter"
+                    width="200"
+                    height="90"
+                    style="
+                        position:absolute;
+                        left:0;
+                        top:0;
+                    "
+                ></canvas>
+            </div>
+
+            <div
+                id="meterModeControls"
+                style="
+                    display:flex;
+                    justify-content:center;
+                    gap:3px;
+                    margin-top:4px;
+                "
+            >
+                <button type="button" data-meter-mode="S">
+                    S
+                </button>
+
+                <button type="button" data-meter-mode="RF">
+                    RF
+                </button>
+
+                <button type="button" data-meter-mode="ALC">
+                    ALC
+                </button>
+
+                <button type="button" data-meter-mode="COMP">
+                    COMP
+                </button>
+
+                <button type="button" data-meter-mode="SWR">
+                    SWR
+                </button>
+            </div>
+        </div>
+
+
+        <!-- ==========================================
+             MAIN VFO
+        =========================================== -->
+        <div
+            style="
+                background:#080C0E;
+                border:1px solid #30424B;
+                padding:7px;
+                display:flex;
+                flex-direction:column;
+                justify-content:center;
+            "
+        >
+
+            <!-- Mode selectors -->
+            <div
+                style="
+                    display:flex;
+                    justify-content:center;
+                    align-items:center;
+                    gap:5px;
+                    margin-bottom:5px;
+                "
+            >
+                <select
+                    id="comboMode"
+                    style="
+                        height:22px;
+                        background:#151A1D;
+                        color:#FFCC55;
+                        border:1px solid #465158;
+                        font-weight:bold;
+                    "
+                >
+                    <option value="AARM" selected>
+                        AARM
+                    </option>
+
+                    <option value="ABM">
+                        ABM
+                    </option>
+
+                    <option value="ABMTV">
+                        ABMTV
+                    </option>
+                </select>
+
+                <select
+                    id="comboBand"
+                    style="
+                        height:22px;
+                        min-width:110px;
+                        background:#151A1D;
+                        color:#75DFFF;
+                        border:1px solid #465158;
+                        font-weight:bold;
+                    "
+                ></select>
+
+                <select
+                    id="comboChannelSector"
+                    title="Channel Sector"
+                    style="
+                        height:22px;
+                        background:#151A1D;
+                        color:#FF79D1;
+                        border:1px solid #465158;
+                        font-weight:bold;
+                    "
+                >
+                    <option value="FCS" selected>
+                        FCS
+                    </option>
+
+                    <option value="LCS">
+                        LCS
+                    </option>
+
+                    <option value="UCS">
+                        UCS
+                    </option>
+                </select>
+            </div>
+
+
+            <!-- Frequency display -->
+            <div
+                style="
+                    display:flex;
+                    justify-content:center;
+                    align-items:flex-end;
+                "
+            >
+                <input
+                    id="txtFrequency"
+                    type="text"
+                    value="4550.00"
+                    inputmode="decimal"
+                    autocomplete="off"
+                    style="
+                        color:#6EEBFF;
+                        background:#020607;
+                        border:1px solid #245767;
+                        box-shadow:
+                            inset 0 0 12px rgba(0,180,220,.12);
+                        font-family:Consolas,monospace;
+                        font-size:42px;
+                        font-weight:bold;
+                        letter-spacing:2px;
+                        text-align:right;
+                        width:205px;
+                        height:52px;
+                    "
+                >
+
+                <span
+                    style="
+                        color:#6EEBFF;
+                        font-size:16px;
+                        font-weight:bold;
+                        margin-left:5px;
+                        margin-bottom:5px;
+                    "
+                >
+                    Vt
+                </span>
+            </div>
+
+
+            <!-- Fine tune -->
+            <div
+                id="frequencyFineTuneControls"
+                style="
+                    display:flex;
+                    justify-content:center;
+                    align-items:center;
+                    gap:4px;
+                    margin-top:6px;
+                    flex-wrap:wrap;
+                "
+            >
+                <button
+                    id="btnTuneDownBig"
+                    type="button"
+                    title="-1.00 Vt"
+                >
+                    −1.00
+                </button>
+
+                <button
+                    id="btnTuneDownMedium"
+                    type="button"
+                    title="-0.10 Vt"
+                >
+                    −0.10
+                </button>
+
+                <button
+                    id="btnTuneDownSmall"
+                    type="button"
+                    title="-0.01 Vt"
+                >
+                    −0.01
+                </button>
+
+                <button
+                    id="btnTuneUpSmall"
+                    type="button"
+                    title="+0.01 Vt"
+                >
+                    +0.01
+                </button>
+
+                <button
+                    id="btnTuneUpMedium"
+                    type="button"
+                    title="+0.10 Vt"
+                >
+                    +0.10
+                </button>
+
+                <button
+                    id="btnTuneUpBig"
+                    type="button"
+                    title="+1.00 Vt"
+                >
+                    +1.00
+                </button>
+            </div>
+        </div>
+
+
+        <!-- ==========================================
+             OFFSET METER
+        =========================================== -->
+        <div
+            style="
+                background:#111416;
+                border:1px solid #343B40;
+                padding:5px;
+            "
+        >
+            <div
+                style="
+                    color:#AEB8BE;
+                    font-size:9px;
+                    font-weight:bold;
+                    margin-bottom:3px;
+                "
+            >
+                CHANNEL OFFSET
+            </div>
+
+            <div
+                id="offsetMeterContainer"
+                style="
+                    position:relative;
+                    width:200px;
+                    height:90px;
+                    margin:auto;
+                "
+            >
+                <canvas
+                    id="canvasOffsetMeter"
+                    width="200"
+                    height="90"
+                    style="
+                        position:absolute;
+                        left:0;
+                        top:0;
+                    "
+                ></canvas>
+            </div>
+
+            <div
+                style="
+                    text-align:center;
+                    color:#71808A;
+                    font-size:9px;
+                    margin-top:3px;
+                "
+            >
+                .00&nbsp;&nbsp;&nbsp;
+                .25&nbsp;&nbsp;&nbsp;
+                .50&nbsp;&nbsp;&nbsp;
+                .75&nbsp;&nbsp;&nbsp;
+                .99
+            </div>
+        </div>
+    </div>
+</section>
 <!-- Morse decoder display -->
 <section
     class="border-box"
