@@ -799,191 +799,125 @@
             </div>
         </section>
 
-        <!-- Spectrum and waterfall display -->
-        <section class="scope-grid">
-            <div
-                style="
-                    height: 22px;
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                "
-            >
-                <div
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 10px;
-                    "
-                >
-                    <span
-                        id="lblScopeMode"
-                        style="
-                            color: #00FFFF;
-                            font-size: 10px;
-                            font-weight: bold;
-                        "
-                    >
-                        SPECTRUM SCOPE
-                    </span>
+       <!-- ==================================================
+     ArNet SDR Spectrum + Waterfall
+================================================== -->
 
-                    <button
-                        id="btnToggleDisplay"
-                        type="button"
-                        style="
-                            background: #003344;
-                            color: #00FFCC;
-                            font-size: 9px;
-                            font-weight: bold;
-                            padding: 2px 6px;
-                            cursor: pointer;
-                        "
-                    >
-                        🔄 SWITCH TO WATERFALL
-                    </button>
-                </div>
+<section
+    class="border-box arnet-sdr-display"
+    style="
+        margin-top:8px;
+        padding:6px;
+    "
+>
+    <div class="arnet-sdr-display-header">
 
-                <div
-                    style="
-                        display: flex;
-                        gap: 8px;
-                        font-size: 9px;
-                    "
-                >
-                    <span style="color: #00FFFF;">
-                        ■ Carrier
-                    </span>
+        <div class="arnet-sdr-display-title">
+            ArNet SPECTRUM
+        </div>
 
-                    <span style="color: #FFFF00;">
-                        ■ Audio
-                    </span>
+        <div class="arnet-sdr-display-status">
+            <span>RX SPECTRUM</span>
 
-                    <span
-                        id="txtVideoLegend"
-                        style="
-                            color: #FF00FF;
-                            display: none;
-                        "
-                    >
-                        ■ Video Subcarrier
-                    </span>
-                              </div>
-            </div>
+            <span id="txtVideoLegend" style="display:none;">
+                VIDEO
+            </span>
+        </div>
 
-            <div
-                class="scope-screen"
-                style="
-                    position:relative;
-                    width:100%;
-                    height:140px;
-                    overflow:hidden;
-                    background:#020508;
-                    border:1px solid #164455;
-                "
-            >
-                <canvas
-                    id="canvasScope"
-                    width="640"
-                    height="140"
-                    style="
-                        width:100%;
-                        height:100%;
-                        display:block;
-                    "
-                ></canvas>
+    </div>
 
-                <canvas
-                    id="imgWaterfall"
-                    width="640"
-                    height="140"
-                    style="
-                        width:100%;
-                        height:100%;
-                        display:none;
-                        image-rendering:pixelated;
-                        cursor:crosshair;
-                    "
-                ></canvas>
-            </div>
 
-            <div
-                id="arnetWaterfallControls"
-                style="
-                    display:none;
-                    flex-wrap:wrap;
-                    align-items:center;
-                    justify-content:center;
-                    gap:5px;
-                    margin-top:5px;
-                    padding:4px;
-                    border:1px solid #224455;
-                    background:#080C10;
-                    color:#AADDFF;
-                    font-family:Consolas, monospace;
-                    font-size:9px;
-                "
-            >
-                <button
-                    id="btnWaterfallZoomOut"
-                    type="button"
-                    style="
-                        min-width:28px;
-                        background:#173341;
-                        color:#FFFFFF;
-                        border:1px solid #337799;
-                        cursor:pointer;
-                    "
-                >
-                    −
-                </button>
+    <!-- ==============================
+         LIVE SCOPE
+    =============================== -->
 
-                <span>
-                    ZOOM:
-                    <strong id="txtWaterfallZoom">
-                        1×
-                    </strong>
-                </span>
+    <div class="arnet-sdr-scope">
 
-                <button
-                    id="btnWaterfallZoomIn"
-                    type="button"
-                    style="
-                        min-width:28px;
-                        background:#173341;
-                        color:#FFFFFF;
-                        border:1px solid #337799;
-                        cursor:pointer;
-                    "
-                >
-                    +
-                </button>
+        <div class="arnet-sdr-subtitle">
+            LIVE SIGNAL
+        </div>
 
-                <button
-                    id="btnWaterfallFullBand"
-                    type="button"
-                    style="
-                        background:#173341;
-                        color:#FFFFFF;
-                        border:1px solid #337799;
-                        cursor:pointer;
-                        font-size:9px;
-                    "
-                >
-                    FULL BAND
-                </button>
+        <canvas
+            id="canvasScope"
+            width="900"
+            height="125"
+        ></canvas>
 
-                <span id="txtWaterfallVisibleRange">
-                    -- Vt
-                </span>
+    </div>
 
-                <span>
-                    POINTER:
-                    <strong id="txtWaterfallHoverFrequency">
-                        -- Vt
-                    </strong>
-                </span>
-            </div>
-        </section>
+
+    <!-- Frequency divider -->
+    <div class="arnet-sdr-frequency-divider">
+        <span>SPECTRUM HISTORY / WATERFALL</span>
+    </div>
+
+
+    <!-- ==============================
+         WATERFALL
+    =============================== -->
+
+    <div class="arnet-sdr-waterfall">
+
+        <canvas
+            id="imgWaterfall"
+            width="900"
+            height="230"
+        ></canvas>
+
+    </div>
+
+
+    <!-- ==============================
+         WATERFALL CONTROLS
+    =============================== -->
+
+    <div
+        id="arnetWaterfallControls"
+        class="arnet-waterfall-controls"
+    >
+
+        <button
+            id="btnWaterfallZoomOut"
+            type="button"
+        >
+            −
+        </button>
+
+        <span>
+            ZOOM
+            <strong id="txtWaterfallZoom">
+                1×
+            </strong>
+        </span>
+
+        <button
+            id="btnWaterfallZoomIn"
+            type="button"
+        >
+            +
+        </button>
+
+        <button
+            id="btnWaterfallFullBand"
+            type="button"
+        >
+            FULL
+        </button>
+
+        <span id="txtWaterfallVisibleRange">
+            -- Vt
+        </span>
+
+        <span>
+            POINTER
+            <strong id="txtWaterfallHoverFrequency">
+                -- Vt
+            </strong>
+        </span>
+
+    </div>
+
+</section>
 
         <!-- File controls and status -->
         <section class="bottom-grid">
