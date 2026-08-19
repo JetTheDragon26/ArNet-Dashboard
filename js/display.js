@@ -411,8 +411,36 @@ function initializeArNetWaterfallControls() {
                         rectangle.width
                     );
 
-                txtFrequency.value =
-                  frequency.toFixed(2);
+                const frequency =
+    waterfallXToFrequency(
+        x,
+        rectangle.width
+    );
+
+let selectedFrequency =
+    frequency;
+
+if (
+    typeof clampFrequencyToArNetSector ===
+        "function"
+) {
+    const clamped =
+        clampFrequencyToArNetSector(
+            frequency
+        );
+
+    if (
+        Number.isFinite(
+            clamped
+        )
+    ) {
+        selectedFrequency =
+            clamped;
+    }
+}
+
+txtFrequency.value =
+    selectedFrequency.toFixed(2);
 
                 txtFrequency.dispatchEvent(
                     new Event(
