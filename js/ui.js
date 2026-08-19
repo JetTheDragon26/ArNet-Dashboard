@@ -1064,6 +1064,45 @@ txtCallsign.addEventListener(
     );
 }
 
+    const btnToggleMorsePanel =
+    document.getElementById(
+        "btnToggleMorsePanel"
+    );
+
+const morseUtilityDrawer =
+    document.getElementById(
+        "morseUtilityDrawer"
+    );
+
+if (
+    btnToggleMorsePanel &&
+    morseUtilityDrawer
+) {
+    btnToggleMorsePanel.addEventListener(
+        "click",
+        () => {
+            const isOpening =
+                morseUtilityDrawer.hidden;
+
+            morseUtilityDrawer.hidden =
+                !isOpening;
+
+            btnToggleMorsePanel
+                .setAttribute(
+                    "aria-expanded",
+                    String(
+                        isOpening
+                    )
+                );
+
+            btnToggleMorsePanel.textContent =
+                isOpening
+                    ? "MORSE ▾"
+                    : "MORSE ▸";
+        }
+    );
+}
+
     const btnDashboardHelp =
     document.getElementById(
         "btnDashboardHelp"
