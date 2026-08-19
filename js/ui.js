@@ -984,7 +984,7 @@ function initializeUIControls() {
         updateCarrierDisplay
     );
 
-    createExtendedMediaControls();
+    //createExtendedMediaControls();
 
     updateCarrierDisplay();
 
