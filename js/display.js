@@ -1330,194 +1330,493 @@ function getFrequencyDecimalOffset() {
 }
 
 function drawSignalMeter(amplitude) {
+    const width =
+        canvasMeter.width;
+
+    const height =
+        canvasMeter.height;
+
+    const centerX =
+        width / 2;
+
+    const pivotY =
+        height - 6;
+
+    const radius =
+        Math.min(
+            78,
+            width * 0.39
+        );
+
     meterCtx.clearRect(
         0,
         0,
-        canvasMeter.width,
-        canvasMeter.height
+        width,
+        height
     );
 
-    // Meter arc
-    meterCtx.strokeStyle =
-        "#666666";
+    /*
+     * ==================================================
+     * BACKGROUND
+     * ==================================================
+     */
 
-    meterCtx.lineWidth = 2;
-
-    meterCtx.beginPath();
-
-    meterCtx.arc(
-        100,
-        85,
-        70,
-        Math.PI + 0.3,
-        (Math.PI * 2) - 0.3
-    );
-
-    meterCtx.stroke();
-
-    // High-signal red section
-    meterCtx.strokeStyle =
-        "#FF3333";
-
-    meterCtx.lineWidth = 3;
-
-    meterCtx.beginPath();
-
-    meterCtx.arc(
-        100,
-        85,
-        70,
-        -0.7,
-        0
-    );
-
-    meterCtx.stroke();
-
-    // Scale labels
     meterCtx.fillStyle =
-        "#AAAAAA";
+        "#020503";
+
+    meterCtx.fillRect(
+        0,
+        0,
+        width,
+        height
+    );
+
+    /*
+     * Subtle inner frame.
+     */
+    meterCtx.strokeStyle =
+        "#18351E";
+
+    meterCtx.lineWidth =
+        1;
+
+    meterCtx.strokeRect(
+        1.5,
+        1.5,
+        width - 3,
+        height - 3
+    );
+
+
+    /*
+     * ==================================================
+     * SCALE ARC
+     * ==================================================
+     */
+
+    const startAngle =
+        Math.PI +
+        0.32;
+
+    const endAngle =
+        (Math.PI * 2) -
+        0.32;
+
+    meterCtx.strokeStyle =
+        "#46694D";
+
+    meterCtx.lineWidth =
+        1.5;
+
+    meterCtx.beginPath();
+
+    meterCtx.arc(
+        centerX,
+        pivotY,
+        radius,
+        startAngle,
+        endAngle
+    );
+
+    meterCtx.stroke();
+
+
+    /*
+     * ==================================================
+     * S-METER TICKS
+     * ==================================================
+     */
+
+    const scaleMarks = [
+        {
+            position: 0.00,
+            label: "1"
+        },
+        {
+            position: 0.16,
+            label: "3"
+        },
+        {
+            position: 0.32,
+            label: "5"
+        },
+        {
+            position: 0.48,
+            label: "7"
+        },
+        {
+            position: 0.64,
+            label: "9"
+        },
+        {
+            position: 0.82,
+            label: "+20"
+        },
+        {
+            position: 1.00,
+            label: "+60"
+        }
+    ];
+
+    meterCtx.textAlign =
+        "center";
+
+    meterCtx.textBaseline =
+        "middle";
+
+    for (
+        const mark of
+        scaleMarks
+    ) {
+        const angle =
+            startAngle +
+            (
+                (
+                    endAngle -
+                    startAngle
+                ) *
+                mark.position
+            );
+
+        const isHighSignal =
+            mark.position >=
+            0.82;
+
+        const tickOuterRadius =
+            radius;
+
+        const tickInnerRadius =
+            isHighSignal
+                ? radius - 9
+                : radius - 7;
+
+        const x1 =
+            centerX +
+            (
+                Math.cos(angle) *
+                tickInnerRadius
+            );
+
+        const y1 =
+            pivotY +
+            (
+                Math.sin(angle) *
+                tickInnerRadius
+            );
+
+        const x2 =
+            centerX +
+            (
+                Math.cos(angle) *
+                tickOuterRadius
+            );
+
+        const y2 =
+            pivotY +
+            (
+                Math.sin(angle) *
+                tickOuterRadius
+            );
+
+        meterCtx.strokeStyle =
+            isHighSignal
+                ? "#9C3B3B"
+                : "#5F8A68";
+
+        meterCtx.lineWidth =
+            isHighSignal
+                ? 1.5
+                : 1;
+
+        meterCtx.beginPath();
+
+        meterCtx.moveTo(
+            x1,
+            y1
+        );
+
+        meterCtx.lineTo(
+            x2,
+            y2
+        );
+
+        meterCtx.stroke();
+
+        const labelRadius =
+            radius - 17;
+
+        const labelX =
+            centerX +
+            (
+                Math.cos(angle) *
+                labelRadius
+            );
+
+        const labelY =
+            pivotY +
+            (
+                Math.sin(angle) *
+                labelRadius
+            );
+
+        meterCtx.fillStyle =
+            isHighSignal
+                ? "#C55B5B"
+                : "#78C786";
+
+        meterCtx.font =
+            mark.label.length >
+                2
+                ? "7px Consolas"
+                : "8px Consolas";
+
+        meterCtx.fillText(
+            mark.label,
+            labelX,
+            labelY
+        );
+    }
+
+
+    /*
+     * ==================================================
+     * RED HIGH-SIGNAL ARC
+     * ==================================================
+     */
+
+    const redStart =
+        startAngle +
+        (
+            (
+                endAngle -
+                startAngle
+            ) *
+            0.78
+        );
+
+    meterCtx.strokeStyle =
+        "#7F2B2B";
+
+    meterCtx.lineWidth =
+        2.5;
+
+    meterCtx.beginPath();
+
+    meterCtx.arc(
+        centerX,
+        pivotY,
+        radius,
+        redStart,
+        endAngle
+    );
+
+    meterCtx.stroke();
+
+
+    /*
+     * ==================================================
+     * SECONDARY RF SCALE
+     * ==================================================
+     */
+
+    meterCtx.fillStyle =
+        "#496851";
 
     meterCtx.font =
-        "8px Consolas";
+        "7px Consolas";
 
     meterCtx.fillText(
-        "S1",
-        22,
-        55
+        "RF",
+        17,
+        height - 24
     );
 
-    meterCtx.fillText(
-        "3",
-        45,
-        30
-    );
+    const rfLabels = [
+        {
+            text: "0",
+            x: 38
+        },
+        {
+            text: "25",
+            x: 70
+        },
+        {
+            text: "50",
+            x: 101
+        },
+        {
+            text: "75",
+            x: 132
+        },
+        {
+            text: "100",
+            x: 165
+        }
+    ];
 
-    meterCtx.fillText(
-        "5",
-        72,
-        16
-    );
+    for (
+        const label of
+        rfLabels
+    ) {
+        meterCtx.fillText(
+            label.text,
+            label.x,
+            height - 24
+        );
+    }
 
-    meterCtx.fillText(
-        "7",
-        102,
-        10
-    );
 
-    meterCtx.fillText(
-        "9",
-        130,
-        16
-    );
+    /*
+     * ==================================================
+     * METER LABELS
+     * ==================================================
+     */
 
     meterCtx.fillStyle =
-        "#FF5555";
-
-    meterCtx.fillText(
-        "+20",
-        150,
-        30
-    );
-
-    meterCtx.fillText(
-        "+60",
-        168,
-        55
-    );
-
-    meterCtx.fillStyle =
-        "#00FFCC";
+        "#8BEA9D";
 
     meterCtx.font =
         "bold 9px Consolas";
 
     meterCtx.fillText(
-        "S-METER",
-        78,
-        42
+        "S",
+        centerX,
+        16
     );
 
     meterCtx.fillStyle =
-        "#3399FF";
+        "#4E7456";
+
+    meterCtx.font =
+        "7px Consolas";
 
     meterCtx.fillText(
-        "Decibels",
-        87,
-        56
+        "SIGNAL",
+        centerX,
+        27
     );
 
-    // Center pivot
-    meterCtx.fillStyle =
-        "#444444";
 
-    meterCtx.strokeStyle =
-        "#AAAAAA";
+    /*
+     * ==================================================
+     * NEEDLE
+     * ==================================================
+     */
 
-    meterCtx.beginPath();
-
-    meterCtx.arc(
-        100,
-        85,
-        5,
-        0,
-        Math.PI * 2
-    );
-
-    meterCtx.fill();
-    meterCtx.stroke();
-
-    // Needle
-    const angleDegrees =
-        150 -
-        (
+    const normalizedAmplitude =
+        Math.max(
+            0,
             Math.min(
                 1,
-                amplitude
-            ) * 120
+                Number(amplitude) ||
+                0
+            )
         );
 
-    const angleRadians =
+    const needleAngle =
+        startAngle +
         (
-            angleDegrees *
-            Math.PI
-        ) / 180;
+            (
+                endAngle -
+                startAngle
+            ) *
+            normalizedAmplitude
+        );
 
-    const radius = 65;
+    const needleRadius =
+        radius - 5;
 
     const needleX =
-        100 +
+        centerX +
         (
-            radius *
             Math.cos(
-                angleRadians
-            )
+                needleAngle
+            ) *
+            needleRadius
         );
 
     const needleY =
-        85 -
+        pivotY +
         (
-            radius *
             Math.sin(
-                angleRadians
-            )
+                needleAngle
+            ) *
+            needleRadius
         );
 
+    /*
+     * Soft needle shadow.
+     */
     meterCtx.strokeStyle =
-        "#55FF55";
+        "rgba(0,0,0,0.7)";
 
-    meterCtx.lineWidth = 2;
+    meterCtx.lineWidth =
+        3;
 
     meterCtx.beginPath();
 
     meterCtx.moveTo(
-        100,
-        85
+        centerX + 1,
+        pivotY + 1
+    );
+
+    meterCtx.lineTo(
+        needleX + 1,
+        needleY + 1
+    );
+
+    meterCtx.stroke();
+
+    /*
+     * Main needle.
+     */
+    meterCtx.strokeStyle =
+        "#B7E8BF";
+
+    meterCtx.lineWidth =
+        1.6;
+
+    meterCtx.beginPath();
+
+    meterCtx.moveTo(
+        centerX,
+        pivotY
     );
 
     meterCtx.lineTo(
         needleX,
         needleY
     );
+
+    meterCtx.stroke();
+
+
+    /*
+     * ==================================================
+     * PIVOT
+     * ==================================================
+     */
+
+    meterCtx.fillStyle =
+        "#111A13";
+
+    meterCtx.strokeStyle =
+        "#6A8B70";
+
+    meterCtx.lineWidth =
+        1;
+
+    meterCtx.beginPath();
+
+    meterCtx.arc(
+        centerX,
+        pivotY,
+        4.5,
+        0,
+        Math.PI * 2
+    );
+
+    meterCtx.fill();
 
     meterCtx.stroke();
 }
