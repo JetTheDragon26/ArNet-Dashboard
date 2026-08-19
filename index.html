@@ -465,339 +465,6 @@
         </div>
     </div>
 </section>
-<!-- Morse decoder display -->
-<section
-    class="border-box"
-    style="
-        margin-top: 8px;
-        margin-bottom: 8px;
-        padding: 7px;
-    "
->
-    <div
-        style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 5px;
-        "
-    >
-        <span
-            style="
-                color: #FFCC00;
-                font-size: 10px;
-                font-weight: bold;
-            "
-        >
-            MORSE SIGNAL DECODER
-        </span>
-
-        <button
-            id="btnClearMorseDecode"
-            type="button"
-            style="
-                background: #442200;
-                color: #FFFFFF;
-                font-size: 9px;
-                font-weight: bold;
-                cursor: pointer;
-                padding: 3px 7px;
-            "
-        >
-            CLEAR
-        </button>
-    </div>
-
-    <div
-        id="txtMorseDecode"
-        style="
-            min-height: 42px;
-            max-height: 100px;
-            overflow-y: auto;
-            background: #080808;
-            border: 1px solid #554400;
-            color: #FFDD55;
-            font-family: Consolas, monospace;
-            font-size: 12px;
-            white-space: pre-wrap;
-            padding: 7px;
-            box-sizing: border-box;
-        "
-    >
-        Waiting for Morse transmission...
-    </div>
-
-    <div
-        id="txtMorseDecodeInfo"
-        style="
-            color: #888888;
-            font-family: Consolas, monospace;
-            font-size: 9px;
-            margin-top: 4px;
-        "
-    >
-        No Morse signal received.
-    </div>
-</section>
-
-        <!-- Transmit and configuration controls -->
-        <section
-            class="controls-grid"
-            style="margin-bottom: 8px;"
-        >
-            <div
-                style="
-                    display: flex;
-                    flex-direction: column;
-                    gap: 3px;
-                "
-            >
-                <button
-                    id="btnPtt"
-                    type="button"
-                    style="
-                        height: 32px;
-                        background: #880000;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 11px;
-                        cursor: pointer;
-                    "
-                >
-                    🎙️ PTT MIC
-                </button>
-
-                <button
-                    id="btnLoadVideo"
-                    type="button"
-                    style="
-                        height: 26px;
-                        background: #005577;
-                        color: #00FFFF;
-                        font-weight: bold;
-                        font-size: 10px;
-                        cursor: pointer;
-                    "
-                >
-                    📷 LOAD VIDEO / IMAGE
-                </button>
-
-                <div
-                    style="
-                        display: grid;
-                        grid-template-columns: 1fr 65px;
-                        gap: 4px;
-                    "
-                >
-                    <input
-                        id="txtCallsign"
-                        type="text"
-                        value="W1AW/1"
-                        maxlength="7"
-                        autocomplete="off"
-                        style="
-                            background: #111115;
-                            color: #00FFCC;
-                            border: 1px solid #333333;
-                            font-weight: bold;
-                            font-size: 11px;
-                            text-align: center;
-                            height: 26px;
-                        "
-                    >
-
-                    <button
-                        id="btnIdent"
-                        type="button"
-                        style="
-                            background: #004466;
-                            color: white;
-                            font-weight: bold;
-                            font-size: 10px;
-                            cursor: pointer;
-                        "
-                    >
-                        📡 IDENT
-                    </button>
-                </div>
-<div
-    style="
-        display: grid;
-        grid-template-columns: 1fr 80px;
-        gap: 4px;
-        margin-top: 3px;
-    "
->
-    <input
-        id="txtMorseMessage"
-        type="text"
-        maxlength="120"
-        placeholder="TYPE MORSE MESSAGE"
-        autocomplete="off"
-        style="
-            background: #111115;
-            color: #FFCC00;
-            border: 1px solid #554400;
-            font-family: Consolas, monospace;
-            font-size: 10px;
-            height: 26px;
-            padding: 0 5px;
-        "
-    >
-
-    <button
-        id="btnSendMorse"
-        type="button"
-        style="
-            background: #665000;
-            color: white;
-            font-weight: bold;
-            font-size: 9px;
-            cursor: pointer;
-        "
-    >
-        📟 MORSE
-    </button>
-</div>
-                <label
-                    style="
-                        display: flex;
-                        align-items: center;
-                        gap: 4px;
-                        margin-top: 2px;
-                        cursor: pointer;
-                    "
-                >
-                    <input
-                        type="checkbox"
-                        id="chkUnencoded"
-                    >
-
-                    <span
-                        style="
-                            color: #AAAAAA;
-                            font-size: 9px;
-                        "
-                    >
-                        Unencoded Audio (Plain Morse)
-                    </span>
-                </label>
-            </div>
-
-            <div></div>
-
-            <div
-                class="border-box"
-                style="
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between;
-                "
-            >
-                <div
-                    style="
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    "
-                >
-                    <span
-                        style="
-                            color: #AAAAAA;
-                            font-size: 10px;
-                            font-weight: bold;
-                        "
-                    >
-                        CARRIER &amp; BANDWIDTH CONFIG
-                    </span>
-
-                    <div
-                        style="
-                            display: flex;
-                            align-items: center;
-                            gap: 4px;
-                        "
-                    >
-                        <span
-                            style="
-                                color: #888888;
-                                font-size: 9px;
-                            "
-                        >
-                            BANDWIDTH:
-                        </span>
-
-                        <select
-                            id="comboBandwidth"
-                            style="
-                                width: 105px;
-                                height: 18px;
-                                background: #111;
-                                color: #00FFCC;
-                                font-size: 9px;
-                                font-weight: bold;
-                            "
-                        >
-                            <option value="wide" selected>
-                                Wide (2.8 kHz)
-                            </option>
-
-                            <option value="narrow">
-                                Narrow (500 Hz)
-                            </option>
-                        </select>
-                    </div>
-                </div>
-
-                <div
-                    style="
-                        display: flex;
-                        flex-direction: column;
-                        gap: 4px;
-                    "
-                >
-                    <div
-                        style="
-                            display: flex;
-                            justify-content: space-between;
-                        "
-                    >
-                        <span
-                            style="
-                                color: #CCCCCC;
-                                font-size: 11px;
-                            "
-                        >
-                            Baseline Carrier Power:
-                        </span>
-
-                        <span
-                            id="txtCarrierVal"
-                            style="
-                                color: #00FFFF;
-                                font-weight: bold;
-                                font-size: 11px;
-                            "
-                        >
-                            20%
-                        </span>
-                    </div>
-
-                    <input
-                        type="range"
-                        id="sliderCarrier"
-                        min="0"
-                        max="0.5"
-                        step="0.05"
-                        value="0.1"
-                        style="
-                            width: 100%;
-                            cursor: pointer;
-                        "
-                    >
-                </div>
-            </div>
-        </section>
 
        <!-- ==================================================
      ArNet SDR Spectrum + Waterfall
@@ -920,117 +587,330 @@
 </section>
 
         <!-- File controls and status -->
-        <section class="bottom-grid">
-            <div
-                class="file-controls"
-                style="
-                    display: grid;
-                    grid-template-columns: repeat(3, 1fr);
-                    gap: 4px;
-                    min-height: 35px;
-                "
+        <div
+    class="file-controls arnet-control-deck"
+>
+
+    <!-- ==========================================
+         MAIN RADIO CONTROLS
+    =========================================== -->
+
+    <div class="arnet-control-row">
+
+        <!-- TX / RX -->
+        <div class="arnet-control-group">
+
+            <div class="arnet-control-title">
+                TRANSMIT
+            </div>
+
+            <button
+                id="btnPtt"
+                type="button"
+                class="arnet-rig-button arnet-ptt-button"
             >
-                <button
-                    id="btnLoad"
-                    type="button"
-                    style="
-                        min-height: 35px;
-                        background: #003366;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 10px;
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                    "
-                    disabled
-                >
-                    📁 DECODE WAV
-                </button>
+                PTT MIC
+            </button>
 
-                <button
-                    id="btnLoadAMMEF"
-                    type="button"
-                    style="
-                        min-height: 35px;
-                        background: #224466;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 10px;
-                        cursor: pointer;
-                    "
-                >
-                    📂 LOAD AMMEF
-                </button>
-
-               <input
-    id="fileTransmitAMMEF"
-    type="file"
-    accept=".ammef,application/x-ammef"
-    hidden
->
-
-<button
-    id="btnTransmitAMMEF"
-    type="button"
-    style="
-        background: #663300;
-        color: white;
-        font-weight: bold;
-        font-size: 10px;
-        cursor: pointer;
-        padding: 7px;
-    "
->
-    📡 TRANSMIT AMMEF
-</button>
+            <div class="arnet-stream-row">
 
                 <input
-    id="fileStreamAudio"
-    type="file"
-    accept="audio/*"
-    hidden
->
+                    id="fileStreamAudio"
+                    type="file"
+                    accept="audio/*"
+                    hidden
+                >
 
-<button
-    id="btnPrepareStream"
-    type="button"
->
-    PREPARE AUDIO STREAM
-</button>
-
-<button
-    id="btnStartStream"
-    type="button"
-    disabled
->
-    TX STREAM
-</button>
-
-<button
-    id="btnStopStream"
-    type="button"
-    disabled
->
-    STOP STREAM
-</button>
-                
                 <button
-                    id="btnSave"
+                    id="btnPrepareStream"
                     type="button"
-                    style="
-                        min-height: 35px;
-                        background: #114422;
-                        color: white;
-                        font-weight: bold;
-                        font-size: 10px;
-                        opacity: 0.5;
-                        cursor: not-allowed;
-                    "
+                    class="arnet-rig-button"
+                >
+                    LOAD STREAM
+                </button>
+
+                <button
+                    id="btnStartStream"
+                    type="button"
+                    class="arnet-rig-button"
                     disabled
                 >
-                    💾 SAVE .AMMEF
+                    TX STREAM
                 </button>
+
+                <button
+                    id="btnStopStream"
+                    type="button"
+                    class="arnet-rig-button"
+                    disabled
+                >
+                    STOP
+                </button>
+
             </div>
+
+        </div>
+
+
+        <!-- Station -->
+        <div class="arnet-control-group">
+
+            <div class="arnet-control-title">
+                STATION
+            </div>
+
+            <div class="arnet-station-row">
+
+                <span class="arnet-small-label">
+                    CALLSIGN
+                </span>
+
+                <input
+                    id="txtCallsign"
+                    type="text"
+                    value="W1AW/1"
+                    maxlength="7"
+                    autocomplete="off"
+                    class="arnet-rig-input arnet-callsign-input"
+                >
+
+                <button
+                    id="btnIdent"
+                    type="button"
+                    class="arnet-rig-button"
+                >
+                    IDENT
+                </button>
+
+            </div>
+
+            <div class="arnet-station-row">
+
+                <span class="arnet-small-label">
+                    BANDWIDTH
+                </span>
+
+                <select
+                    id="comboBandwidth"
+                    class="arnet-rig-select"
+                >
+                    <option
+                        value="wide"
+                        selected
+                    >
+                        WIDE
+                    </option>
+
+                    <option value="narrow">
+                        NARROW
+                    </option>
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <!-- TX level -->
+        <div class="arnet-control-group">
+
+            <div class="arnet-control-title">
+                TX LEVEL
+            </div>
+
+            <div class="arnet-carrier-readout">
+
+                <span>
+                    CARRIER
+                </span>
+
+                <strong id="txtCarrierVal">
+                    20%
+                </strong>
+
+            </div>
+
+            <input
+                type="range"
+                id="sliderCarrier"
+                min="0"
+                max="0.5"
+                step="0.05"
+                value="0.1"
+                class="arnet-carrier-slider"
+            >
+
+        </div>
+
+
+        <!-- Utility -->
+        <div class="arnet-control-group arnet-utility-group">
+
+            <div class="arnet-control-title">
+                UTILITY
+            </div>
+
+            <button
+                id="btnToggleMorsePanel"
+                type="button"
+                class="arnet-rig-button"
+                aria-expanded="false"
+            >
+                MORSE ▸
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         MORSE DRAWER
+    =========================================== -->
+
+    <div
+        id="morseUtilityDrawer"
+        class="arnet-morse-drawer"
+        hidden
+    >
+
+        <div class="arnet-morse-header">
+
+            <div>
+                MORSE TERMINAL
+            </div>
+
+            <button
+                id="btnClearMorseDecode"
+                type="button"
+                class="arnet-rig-button arnet-small-button"
+            >
+                CLEAR
+            </button>
+
+        </div>
+
+
+        <div class="arnet-morse-grid">
+
+            <!-- RX decoder -->
+            <div class="arnet-morse-section">
+
+                <div class="arnet-small-label">
+                    RECEIVED / DECODED
+                </div>
+
+                <div
+                    id="txtMorseDecode"
+                    class="arnet-morse-output"
+                >
+                    Waiting for Morse transmission...
+                </div>
+
+                <div
+                    id="txtMorseDecodeInfo"
+                    class="arnet-morse-info"
+                >
+                    No Morse signal received.
+                </div>
+
+            </div>
+
+
+            <!-- TX Morse -->
+            <div class="arnet-morse-section">
+
+                <div class="arnet-small-label">
+                    TRANSMIT MESSAGE
+                </div>
+
+                <div class="arnet-morse-tx-row">
+
+                    <input
+                        id="txtMorseMessage"
+                        type="text"
+                        maxlength="120"
+                        placeholder="TYPE MORSE MESSAGE"
+                        autocomplete="off"
+                        class="arnet-rig-input"
+                    >
+
+                    <button
+                        id="btnSendMorse"
+                        type="button"
+                        class="arnet-rig-button"
+                    >
+                        SEND
+                    </button>
+
+                </div>
+
+                <label class="arnet-checkbox-row">
+
+                    <input
+                        type="checkbox"
+                        id="chkUnencoded"
+                    >
+
+                    <span>
+                        Plain / unencoded audio
+                    </span>
+
+                </label>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ==========================================
+         HIDDEN LEGACY COMPATIBILITY
+         Keeps old JS references alive.
+    =========================================== -->
+
+    <div
+        id="arnetLegacyControlCompatibility"
+        hidden
+    >
+
+        <button
+            id="btnLoad"
+            type="button"
+            disabled
+        ></button>
+
+        <button
+            id="btnLoadAMMEF"
+            type="button"
+        ></button>
+
+        <button
+            id="btnSave"
+            type="button"
+            disabled
+        ></button>
+
+        <button
+            id="btnLoadVideo"
+            type="button"
+        ></button>
+
+        <input
+            id="fileTransmitAMMEF"
+            type="file"
+            accept=".ammef,application/x-ammef"
+        >
+
+        <button
+            id="btnTransmitAMMEF"
+            type="button"
+        ></button>
+
+    </div>
+
+</div>
 
 <div
     id="dashboardHelpOverlay"
