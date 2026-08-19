@@ -164,30 +164,8 @@ if (
         sectorClamped;
 }
 
-    let selectedFrequency =
-    frequency;
-
-if (
-    typeof clampFrequencyToArNetSector ===
-        "function"
-) {
-    const clamped =
-        clampFrequencyToArNetSector(
-            frequency
-        );
-
-    if (
-        Number.isFinite(
-            clamped
-        )
-    ) {
-        selectedFrequency =
-            clamped;
-    }
-}
-
-txtFrequency.value =
-    selectedFrequency.toFixed(
+    txtFrequency.value =
+    next.toFixed(
         2
     );
 
