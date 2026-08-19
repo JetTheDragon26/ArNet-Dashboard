@@ -79,6 +79,123 @@ function getNetworkChannelSector() {
     return "FCS";
 }
 
+function getArNetSectorRange(
+    sector = getNetworkChannelSector()
+) {
+    switch (
+        String(sector)
+            .trim()
+            .toUpperCase()
+    ) {
+        case "LCS":
+            return {
+                min: 0.00,
+                max: 0.50,
+                center: 0.25
+            };
+
+        case "UCS":
+            return {
+                min: 0.50,
+                max: 0.99,
+                center: 0.75
+            };
+
+        case "FCS":
+        default:
+            return {
+                min: 0.00,
+                max: 0.99,
+                center: 0.50
+            };
+    }
+}
+
+function getArNetSectorCenterFrequency(
+    frequency,
+    sector = getNetworkChannelSector()
+) {
+    const numeric =
+        Number.parseFloat(
+            frequency
+        );
+
+    if (
+        !Number.isFinite(
+            numeric
+        )
+    ) {
+        return null;
+    }
+
+    const channel =
+        Math.floor(
+            numeric
+        );
+
+    const range =
+        getArNetSectorRange(
+            sector
+        );
+
+    return Math.round(
+        (
+            channel +
+            range.center
+        ) *
+        100
+    ) / 100;
+}
+
+function clampFrequencyToArNetSector(
+    frequency,
+    sector = getNetworkChannelSector()
+) {
+    const numeric =
+        Number.parseFloat(
+            frequency
+        );
+
+    if (
+        !Number.isFinite(
+            numeric
+        )
+    ) {
+        return null;
+    }
+
+    const channel =
+        Math.floor(
+            numeric
+        );
+
+    const decimal =
+        numeric -
+        channel;
+
+    const range =
+        getArNetSectorRange(
+            sector
+        );
+
+    const clampedDecimal =
+        Math.max(
+            range.min,
+            Math.min(
+                range.max,
+                decimal
+            )
+        );
+
+    return Math.round(
+        (
+            channel +
+            clampedDecimal
+        ) *
+        100
+    ) / 100;
+}
+
 function getNetworkFrequency() {
     const value =
         Number.parseFloat(
