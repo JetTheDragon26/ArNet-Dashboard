@@ -1821,18 +1821,26 @@ function drawSignalMeter(amplitude) {
 }
 
 function drawFrequencyOffsetMeter() {
-    if (
-        !canvasOffsetMeter ||
-        !offsetMeterCtx
-    ) {
-        return;
-    }
-
     const width =
         canvasOffsetMeter.width;
 
     const height =
         canvasOffsetMeter.height;
+
+    const centerX =
+        width / 2;
+
+    const pivotY =
+        height - 8;
+
+    const radius =
+        Math.min(
+            88,
+            width * 0.37
+        );
+
+    const offset =
+        getFrequencyDecimalOffset();
 
     offsetMeterCtx.clearRect(
         0,
@@ -1842,10 +1850,13 @@ function drawFrequencyOffsetMeter() {
     );
 
     /*
-     * Background.
+     * ==========================================
+     * BACKGROUND
+     * ==========================================
      */
+
     offsetMeterCtx.fillStyle =
-        "#090909";
+        "#020503";
 
     offsetMeterCtx.fillRect(
         0,
@@ -1854,60 +1865,58 @@ function drawFrequencyOffsetMeter() {
         height
     );
 
-    /*
-     * Title.
-     */
-    offsetMeterCtx.fillStyle =
-        "#AAAAAA";
-
-    offsetMeterCtx.font =
-        "bold 9px Consolas";
-
-    offsetMeterCtx.textAlign =
-        "center";
-
-    offsetMeterCtx.fillText(
-        "CHANNEL OFFSET",
-        width / 2,
-        11
-    );
-
-    /*
-     * Meter line.
-     */
-    const left =
-        18;
-
-    const right =
-        width - 18;
-
-    const y =
-        50;
-
     offsetMeterCtx.strokeStyle =
-        "#777777";
+        "#18351E";
 
     offsetMeterCtx.lineWidth =
-        2;
+        1;
+
+    offsetMeterCtx.strokeRect(
+        1.5,
+        1.5,
+        width - 3,
+        height - 3
+    );
+
+
+    /*
+     * ==========================================
+     * ARC
+     * ==========================================
+     */
+
+    const startAngle =
+        Math.PI + 0.32;
+
+    const endAngle =
+        (Math.PI * 2) - 0.32;
+
+    offsetMeterCtx.strokeStyle =
+        "#46694D";
+
+    offsetMeterCtx.lineWidth =
+        1.5;
 
     offsetMeterCtx.beginPath();
 
-    offsetMeterCtx.moveTo(
-        left,
-        y
-    );
-
-    offsetMeterCtx.lineTo(
-        right,
-        y
+    offsetMeterCtx.arc(
+        centerX,
+        pivotY,
+        radius,
+        startAngle,
+        endAngle
     );
 
     offsetMeterCtx.stroke();
 
+
     /*
-     * Major markers.
+     * ==========================================
+     * OFFSET SCALE
+     * ==========================================
      */
-    const positions = [
+
+    const marks = [
         {
             value: 0.00,
             label: ".00"
@@ -1930,106 +1939,351 @@ function drawFrequencyOffsetMeter() {
         }
     ];
 
-    offsetMeterCtx.font =
-        "8px Consolas";
+    offsetMeterCtx.textAlign =
+        "center";
 
-    offsetMeterCtx.fillStyle =
-        "#AAAAAA";
+    offsetMeterCtx.textBaseline =
+        "middle";
 
     for (
-        const marker of
-        positions
+        const mark of
+        marks
     ) {
         const normalized =
-            marker.value /
-            0.99;
+            mark.value / 0.99;
 
-        const x =
-            left +
-            normalized *
+        const angle =
+            startAngle +
+            (
                 (
-                    right -
-                    left
-                );
+                    endAngle -
+                    startAngle
+                ) *
+                normalized
+            );
+
+        const outerRadius =
+            radius;
+
+        const innerRadius =
+            radius - 8;
+
+        const x1 =
+            centerX +
+            (
+                Math.cos(angle) *
+                innerRadius
+            );
+
+        const y1 =
+            pivotY +
+            (
+                Math.sin(angle) *
+                innerRadius
+            );
+
+        const x2 =
+            centerX +
+            (
+                Math.cos(angle) *
+                outerRadius
+            );
+
+        const y2 =
+            pivotY +
+            (
+                Math.sin(angle) *
+                outerRadius
+            );
+
+        /*
+         * Make .50 slightly brighter because
+         * it's the center of an ArNet channel.
+         */
+
+        const isCenter =
+            mark.value === 0.50;
+
+        offsetMeterCtx.strokeStyle =
+            isCenter
+                ? "#8BEA9D"
+                : "#5F8A68";
+
+        offsetMeterCtx.lineWidth =
+            isCenter
+                ? 2
+                : 1;
 
         offsetMeterCtx.beginPath();
 
         offsetMeterCtx.moveTo(
-            x,
-            y - 5
+            x1,
+            y1
         );
 
         offsetMeterCtx.lineTo(
-            x,
-            y + 5
+            x2,
+            y2
         );
 
         offsetMeterCtx.stroke();
 
+
+        /*
+         * Labels
+         */
+
+        const labelRadius =
+            radius - 19;
+
+        const labelX =
+            centerX +
+            (
+                Math.cos(angle) *
+                labelRadius
+            );
+
+        const labelY =
+            pivotY +
+            (
+                Math.sin(angle) *
+                labelRadius
+            );
+
+        offsetMeterCtx.fillStyle =
+            isCenter
+                ? "#9AF0AA"
+                : "#6FAE79";
+
+        offsetMeterCtx.font =
+            isCenter
+                ? "bold 8px Consolas"
+                : "8px Consolas";
+
         offsetMeterCtx.fillText(
-            marker.label,
-            x,
-            y + 17
+            mark.label,
+            labelX,
+            labelY
         );
     }
 
+
     /*
-     * Current decimal position.
+     * ==========================================
+     * TITLE
+     * ==========================================
      */
-    const decimalOffset =
-        getFrequencyDecimalOffset();
 
-    const normalizedOffset =
-        decimalOffset /
-        0.99;
+    offsetMeterCtx.fillStyle =
+        "#8BEA9D";
 
-    const needleX =
-        left +
-        normalizedOffset *
+    offsetMeterCtx.font =
+        "bold 9px Consolas";
+
+    offsetMeterCtx.fillText(
+        "OFFSET",
+        centerX,
+        15
+    );
+
+    offsetMeterCtx.fillStyle =
+        "#4E7456";
+
+    offsetMeterCtx.font =
+        "7px Consolas";
+
+    offsetMeterCtx.fillText(
+        "CHANNEL POSITION",
+        centerX,
+        26
+    );
+
+
+    /*
+     * ==========================================
+     * CENTER REFERENCE
+     * ==========================================
+     */
+
+    const centerAngle =
+        startAngle +
+        (
             (
-                right -
-                left
-            );
+                endAngle -
+                startAngle
+            ) *
+            (0.50 / 0.99)
+        );
 
-    /*
-     * Needle.
-     */
+    const centerInner =
+        radius - 13;
+
+    const centerOuter =
+        radius + 2;
+
     offsetMeterCtx.strokeStyle =
-        "#00FFFF";
+        "#315D39";
 
     offsetMeterCtx.lineWidth =
-        2;
+        1;
 
     offsetMeterCtx.beginPath();
 
     offsetMeterCtx.moveTo(
-        needleX,
-        y - 20
+        centerX +
+            Math.cos(
+                centerAngle
+            ) *
+            centerInner,
+        pivotY +
+            Math.sin(
+                centerAngle
+            ) *
+            centerInner
     );
 
     offsetMeterCtx.lineTo(
-        needleX,
-        y + 6
+        centerX +
+            Math.cos(
+                centerAngle
+            ) *
+            centerOuter,
+        pivotY +
+            Math.sin(
+                centerAngle
+            ) *
+            centerOuter
     );
 
     offsetMeterCtx.stroke();
 
+
     /*
-     * Exact decimal readout.
+     * ==========================================
+     * NEEDLE
+     * ==========================================
      */
-    offsetMeterCtx.fillStyle =
-        "#00FFFF";
 
-    offsetMeterCtx.font =
-        "bold 10px Consolas";
+    const normalizedOffset =
+        Math.max(
+            0,
+            Math.min(
+                1,
+                offset / 0.99
+            )
+        );
 
-    offsetMeterCtx.fillText(
-        decimalOffset.toFixed(2),
-        width / 2,
-        82
+    const needleAngle =
+        startAngle +
+        (
+            (
+                endAngle -
+                startAngle
+            ) *
+            normalizedOffset
+        );
+
+    const needleRadius =
+        radius - 5;
+
+    const needleX =
+        centerX +
+        (
+            Math.cos(
+                needleAngle
+            ) *
+            needleRadius
+        );
+
+    const needleY =
+        pivotY +
+        (
+            Math.sin(
+                needleAngle
+            ) *
+            needleRadius
+        );
+
+
+    /*
+     * Needle shadow
+     */
+
+    offsetMeterCtx.strokeStyle =
+        "rgba(0,0,0,0.7)";
+
+    offsetMeterCtx.lineWidth =
+        3;
+
+    offsetMeterCtx.beginPath();
+
+    offsetMeterCtx.moveTo(
+        centerX + 1,
+        pivotY + 1
     );
-}
 
+    offsetMeterCtx.lineTo(
+        needleX + 1,
+        needleY + 1
+    );
+
+    offsetMeterCtx.stroke();
+
+
+    /*
+     * Needle
+     */
+
+    offsetMeterCtx.strokeStyle =
+        "#B7E8BF";
+
+    offsetMeterCtx.lineWidth =
+        1.6;
+
+    offsetMeterCtx.beginPath();
+
+    offsetMeterCtx.moveTo(
+        centerX,
+        pivotY
+    );
+
+    offsetMeterCtx.lineTo(
+        needleX,
+        needleY
+    );
+
+    offsetMeterCtx.stroke();
+
+
+    /*
+     * ==========================================
+     * PIVOT
+     * ==========================================
+     */
+
+    offsetMeterCtx.fillStyle =
+        "#111A13";
+
+    offsetMeterCtx.strokeStyle =
+        "#6A8B70";
+
+    offsetMeterCtx.lineWidth =
+        1;
+
+    offsetMeterCtx.beginPath();
+
+    offsetMeterCtx.arc(
+        centerX,
+        pivotY,
+        4.5,
+        0,
+        Math.PI * 2
+    );
+
+    offsetMeterCtx.fill();
+
+    offsetMeterCtx.stroke();
+}
 /**
  * Resizes the scope canvas to its CSS display size.
  */
