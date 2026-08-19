@@ -169,6 +169,209 @@ input[type="range"] {
 
 #txtFrequency:focus {
     outline: none;
+
+   /* ==================================================
+   ArNet SDR Spectrum Display
+================================================== */
+
+.arnet-sdr-display {
+    background: #050806;
+    border: 1px solid #1c3b24;
+}
+
+.arnet-sdr-display-header {
+    height: 24px;
+
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    padding: 0 7px;
+
+    background: #090e0a;
+    border-bottom: 1px solid #17351f;
+}
+
+.arnet-sdr-display-title {
+    color: #74d887;
+
+    font-family: Consolas, monospace;
+    font-size: 11px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+.arnet-sdr-display-status {
+    display: flex;
+    gap: 10px;
+
+    color: #557c5d;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+}
+
+
+/* ==============================
+   Scope
+============================== */
+
+.arnet-sdr-scope {
+    position: relative;
+
+    height: 125px;
+
+    background:
+        linear-gradient(
+            rgba(50, 100, 60, .07) 1px,
+            transparent 1px
+        ),
+        linear-gradient(
+            90deg,
+            rgba(50, 100, 60, .07) 1px,
+            transparent 1px
+        ),
+        #020503;
+
+    background-size:
+        25px 25px;
+
+    overflow: hidden;
+}
+
+.arnet-sdr-scope canvas {
+    display: block;
+
+    width: 100%;
+    height: 125px;
+}
+
+.arnet-sdr-subtitle {
+    position: absolute;
+
+    top: 5px;
+    left: 7px;
+
+    z-index: 2;
+
+    color: #416f4a;
+
+    font-family: Consolas, monospace;
+    font-size: 8px;
+
+    pointer-events: none;
+}
+
+
+/* ==============================
+   Divider
+============================== */
+
+.arnet-sdr-frequency-divider {
+    height: 18px;
+
+    display: flex;
+    align-items: center;
+
+    padding-left: 7px;
+
+    background: #080c09;
+
+    border-top: 1px solid #17351f;
+    border-bottom: 1px solid #17351f;
+
+    color: #557c5d;
+
+    font-family: Consolas, monospace;
+    font-size: 8px;
+}
+
+
+/* ==============================
+   Waterfall
+============================== */
+
+.arnet-sdr-waterfall {
+    position: relative;
+
+    height: 230px;
+
+    background: #010301;
+
+    overflow: hidden;
+}
+
+#imgWaterfall {
+    display: block !important;
+
+    width: 100%;
+    height: 230px;
+
+    image-rendering: pixelated;
+
+    cursor: crosshair;
+}
+
+
+/* ==============================
+   Waterfall controls
+============================== */
+
+.arnet-waterfall-controls {
+    display: flex !important;
+
+    align-items: center;
+    justify-content: center;
+
+    flex-wrap: wrap;
+
+    gap: 7px;
+
+    min-height: 26px;
+
+    padding: 3px 6px;
+
+    background: #080d09;
+
+    border-top: 1px solid #17351f;
+
+    color: #71987a;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+}
+
+.arnet-waterfall-controls button {
+    min-width: 30px;
+    height: 20px;
+
+    padding: 1px 7px;
+
+    background: #0c160e;
+
+    color: #77c988;
+
+    border: 1px solid #285432;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+    font-weight: bold;
+
+    cursor: pointer;
+}
+
+.arnet-waterfall-controls button:hover {
+    background: #132318;
+
+    border-color: #3d7549;
+
+    color: #9befaa;
+}
+
+.arnet-waterfall-controls strong {
+    color: #91dfa0;
+}
     border-color: #58DFFF !important;
     box-shadow:
         inset 0 0 12px rgba(0, 180, 220, .16),
