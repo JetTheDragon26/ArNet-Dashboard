@@ -912,6 +912,216 @@ wfCtx.fillText(
     wfCtx.restore();
 }
 
+function drawArNetWaterfallTunedMarker() {
+    const tunedFrequency =
+        Number.parseFloat(
+            txtFrequency?.value
+        );
+
+    if (
+        !Number.isFinite(
+            tunedFrequency
+        )
+    ) {
+        return;
+    }
+
+    const channel =
+        Math.floor(
+            tunedFrequency
+        );
+
+    const sector =
+        typeof getNetworkChannelSector ===
+            "function"
+            ? getNetworkChannelSector()
+            : "FCS";
+
+    let sectorMin;
+    let sectorMax;
+
+    switch (sector) {
+        case "LCS":
+            sectorMin =
+                channel + 0.00;
+
+            sectorMax =
+                channel + 0.50;
+            break;
+
+        case "UCS":
+            sectorMin =
+                channel + 0.50;
+
+            sectorMax =
+                channel + 0.99;
+            break;
+
+        case "FCS":
+        default:
+            sectorMin =
+                channel + 0.00;
+
+            sectorMax =
+                channel + 0.99;
+            break;
+    }
+
+    const visibleRange =
+        getCurrentWaterfallBandRange();
+
+    if (
+        sectorMax <
+            visibleRange.min ||
+        sectorMin >
+            visibleRange.max
+    ) {
+        return;
+    }
+
+    const visibleMin =
+        Math.max(
+            sectorMin,
+            visibleRange.min
+        );
+
+    const visibleMax =
+        Math.min(
+            sectorMax,
+            visibleRange.max
+        );
+
+    const leftX =
+        frequencyToWaterfallX(
+            visibleMin,
+            imgWaterfall.width
+        );
+
+    const rightX =
+        frequencyToWaterfallX(
+            visibleMax,
+            imgWaterfall.width
+        );
+
+    const tunedX =
+        frequencyToWaterfallX(
+            tunedFrequency,
+            imgWaterfall.width
+        );
+
+    const bottom =
+        imgWaterfall.height - 2;
+
+    const edgeHeight =
+        11;
+
+    wfCtx.save();
+
+    wfCtx.strokeStyle =
+        "#D8D52A";
+
+    wfCtx.lineWidth =
+        1.4;
+
+    wfCtx.lineJoin =
+        "round";
+
+    wfCtx.lineCap =
+        "round";
+
+    /*
+     * Main yellow passband line.
+     */
+    wfCtx.beginPath();
+
+    wfCtx.moveTo(
+        leftX,
+        bottom - edgeHeight
+    );
+
+    wfCtx.lineTo(
+        rightX,
+        bottom - edgeHeight
+    );
+
+    wfCtx.stroke();
+
+    /*
+     * Left hook.
+     */
+    wfCtx.beginPath();
+
+    wfCtx.moveTo(
+        leftX,
+        bottom - edgeHeight
+    );
+
+    wfCtx.lineTo(
+        leftX + 3,
+        bottom - 3
+    );
+
+    wfCtx.lineTo(
+        leftX + 7,
+        bottom
+    );
+
+    wfCtx.stroke();
+
+    /*
+     * Right hook.
+     */
+    wfCtx.beginPath();
+
+    wfCtx.moveTo(
+        rightX,
+        bottom - edgeHeight
+    );
+
+    wfCtx.lineTo(
+        rightX - 3,
+        bottom - 3
+    );
+
+    wfCtx.lineTo(
+        rightX - 7,
+        bottom
+    );
+
+    wfCtx.stroke();
+
+    /*
+     * Exact tuning notch.
+     */
+    if (
+        tunedFrequency >=
+            visibleRange.min &&
+        tunedFrequency <=
+            visibleRange.max
+    ) {
+        wfCtx.beginPath();
+
+        wfCtx.moveTo(
+            tunedX - 4,
+            bottom - edgeHeight
+        );
+
+        wfCtx.lineTo(
+            tunedX,
+            bottom - 4
+        );
+
+        wfCtx.lineTo(
+            tunedX + 4,
+            bottom - edgeHeight
+        );
+
+        wfCtx.stroke();
+    }
+
+    wfCtx.restore();
+}
+
 /**
  * Calculates the RMS level of the current PCM playback
  * around a specific elapsed time.
