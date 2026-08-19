@@ -896,3 +896,477 @@ button:disabled {
             1fr;
     }
 }
+
+/* ==================================================
+   ArNet SDR Lower Control Deck
+================================================== */
+
+.arnet-control-deck {
+    background: #030704;
+    border: 1px solid #17351f;
+    padding: 6px;
+}
+
+.arnet-control-row {
+    display: grid;
+
+    grid-template-columns:
+        1.35fr
+        1fr
+        0.8fr
+        0.55fr;
+
+    gap: 6px;
+}
+
+.arnet-control-group {
+    background:
+        linear-gradient(
+            180deg,
+            #09110b 0%,
+            #050906 100%
+        );
+
+    border: 1px solid #1d4426;
+
+    padding: 7px;
+
+    min-width: 0;
+}
+
+.arnet-control-title {
+    color: #52795a;
+
+    font-size: 8px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 6px;
+
+    border-bottom:
+        1px solid #122d19;
+
+    padding-bottom: 3px;
+}
+
+
+/* ==================================================
+   General rig buttons
+================================================== */
+
+.arnet-rig-button {
+    background:
+        linear-gradient(
+            180deg,
+            #102016,
+            #08100a
+        );
+
+    color: #78d88b;
+
+    border: 1px solid #285432;
+
+    border-radius: 2px;
+
+    min-height: 26px;
+
+    padding: 3px 8px;
+
+    font-family: Consolas, monospace;
+    font-size: 9px;
+    font-weight: bold;
+
+    text-transform: uppercase;
+
+    cursor: pointer;
+
+    box-shadow:
+        inset 0 1px 0
+        rgba(
+            120,
+            220,
+            140,
+            0.08
+        );
+
+    transition:
+        background 0.12s ease,
+        border-color 0.12s ease,
+        color 0.12s ease,
+        transform 0.05s ease;
+}
+
+.arnet-rig-button:hover:not(:disabled) {
+    background:
+        linear-gradient(
+            180deg,
+            #17301e,
+            #0c1810
+        );
+
+    color: #a1efae;
+
+    border-color: #478652;
+}
+
+.arnet-rig-button:active:not(:disabled) {
+    transform: translateY(1px);
+
+    background:
+        #071009;
+}
+
+.arnet-rig-button:disabled {
+    background: #060906;
+
+    color: #314937;
+
+    border-color: #142a19;
+
+    opacity: 0.6;
+
+    cursor: not-allowed;
+}
+
+
+/* ==================================================
+   PTT
+================================================== */
+
+.arnet-ptt-button {
+    width: 100%;
+
+    min-height: 34px;
+
+    color: #8fe69e;
+
+    font-size: 11px;
+
+    letter-spacing: 1px;
+}
+
+/*
+ * We'll toggle this class during TX later.
+ */
+.arnet-ptt-button.is-transmitting {
+    background:
+        linear-gradient(
+            180deg,
+            #441414,
+            #240909
+        );
+
+    color: #ff9090;
+
+    border-color: #9b3636;
+
+    box-shadow:
+        0 0 8px
+        rgba(
+            255,
+            50,
+            50,
+            0.18
+        );
+}
+
+
+/* ==================================================
+   Stream controls
+================================================== */
+
+.arnet-stream-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        1fr
+        0.65fr;
+
+    gap: 4px;
+
+    margin-top: 5px;
+}
+
+
+/* ==================================================
+   Station controls
+================================================== */
+
+.arnet-station-row {
+    display: grid;
+
+    grid-template-columns:
+        68px
+        minmax(80px, 1fr)
+        auto;
+
+    align-items: center;
+
+    gap: 5px;
+
+    margin-bottom: 5px;
+}
+
+.arnet-station-row:last-child {
+    margin-bottom: 0;
+}
+
+.arnet-small-label {
+    color: #4f7657;
+
+    font-size: 8px;
+    font-weight: bold;
+
+    letter-spacing: 0.5px;
+}
+
+.arnet-rig-input,
+.arnet-rig-select {
+    background: #010401 !important;
+
+    color: #8cdf9b !important;
+
+    border:
+        1px solid #224a2b !important;
+
+    border-radius: 1px;
+
+    min-height: 25px;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size: 10px;
+
+    outline: none;
+}
+
+.arnet-rig-input {
+    padding: 3px 6px;
+}
+
+.arnet-rig-input:focus,
+.arnet-rig-select:focus {
+    border-color:
+        #478652 !important;
+
+    box-shadow:
+        0 0 5px
+        rgba(
+            100,
+            220,
+            120,
+            0.12
+        );
+}
+
+.arnet-callsign-input {
+    text-align: center;
+
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+
+/* ==================================================
+   TX level
+================================================== */
+
+.arnet-carrier-readout {
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items: center;
+
+    color: #557c5d;
+
+    font-size: 9px;
+
+    margin-bottom: 7px;
+}
+
+.arnet-carrier-readout strong {
+    color: #91e3a0;
+
+    font-size: 11px;
+}
+
+.arnet-carrier-slider {
+    width: 100%;
+
+    accent-color: #4d9b5c;
+}
+
+
+/* ==================================================
+   Utility
+================================================== */
+
+.arnet-utility-group {
+    display: flex;
+
+    flex-direction: column;
+}
+
+.arnet-utility-group .arnet-rig-button {
+    flex-grow: 1;
+}
+
+
+/* ==================================================
+   Morse drawer
+================================================== */
+
+.arnet-morse-drawer {
+    margin-top: 6px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #060b07,
+            #020503
+        );
+
+    border:
+        1px solid #1d4426;
+
+    padding: 7px;
+}
+
+.arnet-morse-drawer[hidden] {
+    display: none !important;
+}
+
+.arnet-morse-header {
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items: center;
+
+    color: #79d78a;
+
+    font-size: 9px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+
+    margin-bottom: 6px;
+}
+
+.arnet-small-button {
+    min-height: 21px;
+
+    padding: 1px 7px;
+}
+
+.arnet-morse-grid {
+    display: grid;
+
+    grid-template-columns:
+        1.2fr
+        1fr;
+
+    gap: 7px;
+}
+
+.arnet-morse-section {
+    min-width: 0;
+}
+
+.arnet-morse-output {
+    min-height: 58px;
+
+    max-height: 115px;
+
+    overflow-y: auto;
+
+    margin-top: 4px;
+
+    padding: 6px;
+
+    background: #010301;
+
+    border:
+        1px solid #17351f;
+
+    color: #92e9a1;
+
+    font-family:
+        Consolas,
+        monospace;
+
+    font-size: 11px;
+
+    white-space: pre-wrap;
+
+    box-sizing: border-box;
+}
+
+.arnet-morse-info {
+    color: #486850;
+
+    font-size: 8px;
+
+    margin-top: 4px;
+}
+
+.arnet-morse-tx-row {
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        65px;
+
+    gap: 4px;
+
+    margin-top: 4px;
+}
+
+.arnet-checkbox-row {
+    display: flex;
+
+    align-items: center;
+
+    gap: 5px;
+
+    margin-top: 6px;
+
+    color: #5a7760;
+
+    font-size: 8px;
+
+    cursor: pointer;
+}
+
+
+/* ==================================================
+   Responsive lower deck
+================================================== */
+
+@media (
+    max-width: 900px
+) {
+    .arnet-control-row {
+        grid-template-columns:
+            1fr
+            1fr;
+    }
+}
+
+@media (
+    max-width: 650px
+) {
+    .arnet-control-row,
+    .arnet-morse-grid {
+        grid-template-columns:
+            1fr;
+    }
+}
