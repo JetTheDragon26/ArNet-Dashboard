@@ -489,6 +489,42 @@ function createExtendedMediaControls() {
     refreshMediaActionButtons();
 }
 
+function isFrequencyInsideArNetSector(
+    frequency,
+    sector = getNetworkChannelSector()
+) {
+    const numeric =
+        Number.parseFloat(
+            frequency
+        );
+
+    if (
+        !Number.isFinite(
+            numeric
+        )
+    ) {
+        return false;
+    }
+
+    const decimal =
+        numeric -
+        Math.floor(
+            numeric
+        );
+
+    const range =
+        getArNetSectorRange(
+            sector
+        );
+
+    return (
+        decimal >=
+            range.min &&
+        decimal <=
+            range.max
+    );
+}
+
 function refreshMediaActionButtons() {
     setButtonEnabled(
         btnPlayCleanAMMEF,
