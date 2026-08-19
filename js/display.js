@@ -912,32 +912,6 @@ wfCtx.fillText(
     wfCtx.restore();
 }
 
-if (
-    !incomingArNetAudioAnalyser
-) {
-    incomingArNetAudioAnalyser =
-        audioCtx.createAnalyser();
-
-    incomingArNetAudioAnalyser.fftSize =
-        256;
-
-    incomingArNetAudioAnalyser.smoothingTimeConstant =
-        0.25;
-
-    incomingArNetAnalyserBuffer =
-        new Float32Array(
-            incomingArNetAudioAnalyser
-                .fftSize
-        );
-
-    incomingArNetAudioAnalyser.connect(
-        audioCtx.destination
-    );
-}
-
-detuneGain.connect(
-    incomingArNetAudioAnalyser
-);
 /**
  * Calculates the RMS level of the current PCM playback
  * around a specific elapsed time.
