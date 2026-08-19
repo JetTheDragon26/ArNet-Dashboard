@@ -1370,3 +1370,13 @@ button:disabled {
             1fr;
     }
 }
+
+#btnToggleMorsePanel[
+    aria-expanded="true"
+] {
+    background: #132719;
+
+    color: #a0efae;
+
+    border-color: #478652;
+}
