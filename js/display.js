@@ -1340,12 +1340,12 @@ function drawSignalMeter(amplitude) {
         width / 2;
 
     const pivotY =
-        height - 6;
+        height - 8;
 
     const radius =
         Math.min(
-            78,
-            width * 0.39
+            88,
+            width * 0.37
         );
 
     meterCtx.clearRect(
@@ -1627,33 +1627,32 @@ function drawSignalMeter(amplitude) {
 
     meterCtx.fillText(
         "RF",
-        17,
-        height - 24
+        20,
+        height - 18
     );
 
     const rfLabels = [
-        {
-            text: "0",
-            x: 38
-        },
-        {
-            text: "25",
-            x: 70
-        },
-        {
-            text: "50",
-            x: 101
-        },
-        {
-            text: "75",
-            x: 132
-        },
-        {
-            text: "100",
-            x: 165
-        }
-    ];
-
+    {
+        text: "0",
+        x: 48
+    },
+    {
+        text: "25",
+        x: 82
+    },
+    {
+        text: "50",
+        x: 120
+    },
+    {
+        text: "75",
+        x: 158
+    },
+    {
+        text: "100",
+        x: 198
+    }
+];
     for (
         const label of
         rfLabels
@@ -1661,7 +1660,7 @@ function drawSignalMeter(amplitude) {
         meterCtx.fillText(
             label.text,
             label.x,
-            height - 24
+            height - 18
         );
     }
 
@@ -1681,7 +1680,7 @@ function drawSignalMeter(amplitude) {
     meterCtx.fillText(
         "S",
         centerX,
-        16
+        15
     );
 
     meterCtx.fillStyle =
@@ -1693,7 +1692,7 @@ function drawSignalMeter(amplitude) {
     meterCtx.fillText(
         "SIGNAL",
         centerX,
-        27
+        26
     );
 
 
