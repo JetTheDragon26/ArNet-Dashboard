@@ -316,10 +316,11 @@ async function startPttRecording() {
         isRecording = true;
 
         btnPtt.textContent =
-            "🔴 RECORDING";
+    "RECORDING";
 
-        btnPtt.style.background =
-            "darkred";
+btnPtt.classList.add(
+    "is-transmitting"
+);
 
         btnIdent.disabled =
             true;
@@ -378,10 +379,11 @@ function stopPttRecording() {
     isRecording = false;
 
     btnPtt.textContent =
-        "🎙️ PTT MIC";
+    "PTT MIC";
 
-    btnPtt.style.background =
-        "#880000";
+   btnPtt.classList.remove(
+    "is-transmitting"
+     );
 
     btnIdent.disabled =
         false;
