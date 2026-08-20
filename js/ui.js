@@ -1178,6 +1178,31 @@ if (dashboardHelpOverlay) {
     }
 );
 
+    const meterModeButtons =
+    document.querySelectorAll(
+        "#meterModeControls button"
+    );
+
+for (
+    const button of
+    meterModeButtons
+) {
+    button.addEventListener(
+        "click",
+        () => {
+            if (
+                typeof setMeterMode ===
+                    "function"
+            ) {
+                setMeterMode(
+                    button.dataset
+                        .meterMode
+                );
+            }
+        }
+    );
+}
+
     const btnTuneDownBig =
     document.getElementById(
         "btnTuneDownBig"
@@ -1284,5 +1309,13 @@ txtCallsign.addEventListener(
         }
     }
 );
+
+ if (
+    typeof setMeterMode ===
+        "function"
+) {
+    setMeterMode(
+        "S"
+    );
     
 }
