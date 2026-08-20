@@ -487,10 +487,79 @@ txtFrequency.value =
     updateArNetWaterfallControls();
 }
 
+function getArNetSignalSectorRange(
+    signal
+) {
+    const frequency =
+        Number.parseFloat(
+            signal?.frequency
+        );
+
+    if (
+        !Number.isFinite(
+            frequency
+        )
+    ) {
+        return null;
+    }
+
+    const channel =
+        Math.floor(
+            frequency
+        );
+
+    const sector =
+        String(
+            signal?.channelSector ||
+            signal?.sector ||
+            "FCS"
+        )
+            .trim()
+            .toUpperCase();
+
+    switch (
+        sector
+    ) {
+        case "LCS":
+            return {
+                sector,
+                min:
+                    channel +
+                    0.00,
+                max:
+                    channel +
+                    0.50
+            };
+
+        case "UCS":
+            return {
+                sector,
+                min:
+                    channel +
+                    0.50,
+                max:
+                    channel +
+                    0.99
+            };
+
+        case "FCS":
+        default:
+            return {
+                sector:
+                    "FCS",
+                min:
+                    channel +
+                    0.00,
+                max:
+                    channel +
+                    0.99
+            };
+    }
+}
+
 function getNetworkSignalIntensity(
     signal,
-    x,
-    signalX
+    x
 ) {
     const kind =
         String(
@@ -512,84 +581,96 @@ function getNetworkSignalIntensity(
             )
         );
 
-    /*
-     * Width values below are virtual bandwidth in Vt,
-     * not raw pixels.
-     */
-    let bandwidthVt;
+    const sectorRange =
+        getArNetSignalSectorRange(
+            signal
+        );
 
-    switch (kind) {
-        case "morse":
-            bandwidthVt =
-                1.5;
-            break;
-
-        case "ident":
-            bandwidthVt =
-                2;
-            break;
-
-        case "voice":
-            bandwidthVt =
-                3;
-            break;
-
-        case "audio":
-        case "audio-stream":
-        case "stream":
-            bandwidthVt =
-                4;
-            break;
-
-        case "music":
-            bandwidthVt =
-                6;
-            break;
-
-        case "photo":
-            bandwidthVt =
-                8;
-            break;
-
-        case "video":
-            bandwidthVt =
-                12;
-            break;
-
-        default:
-            bandwidthVt =
-                Math.max(
-                    2,
-                    Number(
-                        signal.width
-                    ) ||
-                    3
-                );
-            break;
+    if (
+        !sectorRange
+    ) {
+        return 0;
     }
 
-    const widthPixels =
-        waterfallVtWidthToPixels(
-            bandwidthVt
+    const leftX =
+        frequencyToWaterfallX(
+            sectorRange.min,
+            wfWidth
+        );
+
+    const rightX =
+        frequencyToWaterfallX(
+            sectorRange.max,
+            wfWidth
+        );
+
+    if (
+        x <
+            Math.min(
+                leftX,
+                rightX
+            ) ||
+        x >
+            Math.max(
+                leftX,
+                rightX
+            )
+    ) {
+        return 0;
+    }
+
+    const centerX =
+        frequencyToWaterfallX(
+            Number(
+                signal.frequency
+            ),
+            wfWidth
+        );
+
+    const sectorWidth =
+        Math.max(
+            1,
+            Math.abs(
+                rightX -
+                leftX
+            )
         );
 
     const distance =
         Math.abs(
             x -
-            signalX
+            centerX
         );
 
-    if (
-        distance >
-        widthPixels
-    ) {
-        return 0;
-    }
+    const sectorFloor =
+        0.20;
+
+    const normalizedDistance =
+        Math.min(
+            1,
+            distance /
+            Math.max(
+                1,
+                sectorWidth *
+                0.55
+            )
+        );
+
+    const peakShape =
+        Math.cos(
+            normalizedDistance *
+            (
+                Math.PI /
+                2
+            )
+        );
 
     let modulation =
         1;
 
-    switch (kind) {
+    switch (
+        kind
+    ) {
         case "morse":
             modulation =
                 Math.random() >
@@ -648,22 +729,17 @@ function getNetworkSignalIntensity(
             break;
     }
 
-    const shape =
-        Math.cos(
-            (
-                distance /
-                widthPixels
-            ) *
-            (
-                Math.PI /
-                2
-            )
+    const shapedStrength =
+        sectorFloor +
+        (
+            peakShape *
+            0.80
         );
 
     return (
         baseStrength *
         modulation *
-        shape
+        shapedStrength
     );
 }
 
@@ -2680,18 +2756,11 @@ const activeSignals =
                 continue;
             }
 
-            const signalX =
-                frequencyToWaterfallX(
-                    signal.frequency,
-                    wfWidth
-                );
-
             networkIntensity +=
-                getNetworkSignalIntensity(
-                    signal,
-                    x,
-                    signalX
-                );
+    getNetworkSignalIntensity(
+        signal,
+        x
+    );
         }
 
         /*
@@ -2707,38 +2776,120 @@ const activeSignals =
                 tunedFrequency
             )
         ) {
-            const distance =
-                Math.abs(
-                    x -
-                    tunedX
-                );
 
-            const localWidth =
-    waterfallVtWidthToPixels(
-        isAbmtvMode
-            ? 10
-            : 3
+           const localSector =
+    typeof getNetworkChannelSector ===
+        "function"
+        ? getNetworkChannelSector()
+        : "FCS";
+
+const channel =
+    Math.floor(
+        tunedFrequency
     );
 
-            if (
-                distance <
-                localWidth
-            ) {
-                localSignal =
-                    amplitude *
-                    Math.cos(
-                        (
-                            distance /
-                            localWidth
-                        ) *
-                        (
-                            Math.PI /
-                            2
-                        )
-                    );
-            }
-        }
+let sectorMin;
+let sectorMax;
 
+switch (
+    localSector
+) {
+    case "LCS":
+        sectorMin =
+            channel +
+            0.00;
+
+        sectorMax =
+            channel +
+            0.50;
+        break;
+
+    case "UCS":
+        sectorMin =
+            channel +
+            0.50;
+
+        sectorMax =
+            channel +
+            0.99;
+        break;
+
+    case "FCS":
+    default:
+        sectorMin =
+            channel +
+            0.00;
+
+        sectorMax =
+            channel +
+            0.99;
+        break;
+}
+
+const localLeftX =
+    frequencyToWaterfallX(
+        sectorMin,
+        wfWidth
+    );
+
+const localRightX =
+    frequencyToWaterfallX(
+        sectorMax,
+        wfWidth
+    );
+
+if (
+    x >=
+        Math.min(
+            localLeftX,
+            localRightX
+        ) &&
+    x <=
+        Math.max(
+            localLeftX,
+            localRightX
+        )
+) {
+    const sectorWidth =
+        Math.max(
+            1,
+            Math.abs(
+                localRightX -
+                localLeftX
+            )
+        );
+
+    const distance =
+        Math.abs(
+            x -
+            tunedX
+        );
+
+    const shape =
+        Math.cos(
+            Math.min(
+                1,
+                distance /
+                (
+                    sectorWidth *
+                    0.55
+                )
+            ) *
+            (
+                Math.PI /
+                2
+            )
+        );
+
+    localSignal =
+        amplitude *
+        (
+            0.20 +
+            shape *
+                0.80
+        );
+}
+            
         /*
          * Faint tuned-frequency marker. This is deliberately
          * weaker than a real transmission.
