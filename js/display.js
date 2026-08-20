@@ -557,6 +557,71 @@ function getArNetSignalSectorRange(
     }
 }
 
+let currentMeterMode =
+    "S";
+
+function setMeterMode(
+    mode
+) {
+    const normalized =
+        String(
+            mode ||
+            "S"
+        )
+            .trim()
+            .toUpperCase();
+
+    const allowedModes =
+        [
+            "S",
+            "RF",
+            "ALC",
+            "COMP",
+            "SWR"
+        ];
+
+    if (
+        !allowedModes.includes(
+            normalized
+        )
+    ) {
+        return;
+    }
+
+    currentMeterMode =
+        normalized;
+
+    const modeText =
+        document.getElementById(
+            "txtMeterMode"
+        );
+
+    if (modeText) {
+        modeText.textContent =
+            normalized;
+    }
+
+    const buttons =
+        document.querySelectorAll(
+            "#meterModeControls button"
+        );
+
+    for (
+        const button of
+        buttons
+    ) {
+        const isActive =
+            button.dataset
+                .meterMode ===
+            normalized;
+
+        button.classList.toggle(
+            "active",
+            isActive
+        );
+    }
+}
+
 function getNetworkSignalIntensity(
     signal,
     x
