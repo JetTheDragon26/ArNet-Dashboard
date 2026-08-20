@@ -159,6 +159,20 @@ input[type="range"] {
     border-color: #2c6537;
 }
 
+#meterModeControls button.active {
+    background: #17301e;
+    color: #9af0aa;
+    border-color: #478652;
+    box-shadow:
+        inset 0 0 5px
+        rgba(
+            90,
+            220,
+            110,
+            0.15
+        );
+}
+
 #frequencyFineTuneControls button:hover,
 #meterModeControls button:hover {
     background: #303A40;
