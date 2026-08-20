@@ -907,6 +907,8 @@ function finishIncomingArNetStream(
 ) {
     clearActiveRxPanel();
 }
+    
+} 
 
     if (
     incomingArNetStreams.size ===
