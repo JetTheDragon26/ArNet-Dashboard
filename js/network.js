@@ -13,6 +13,9 @@ let networkSpectrumSignals =
 let networkSpectrumLastUpdate =
     0;
 
+let activeRxClearTimer =
+    null;
+
 // ======================================================
 // Status helpers
 // ======================================================
@@ -1132,6 +1135,227 @@ function shouldReceiveNetworkTransmission(
     return true;
 }
 
+function updateActiveRxPanel(
+    message,
+    options = {}
+) {
+    const panel =
+        document.getElementById(
+            "activeRxPanel"
+        );
+
+    if (!panel) {
+        return;
+    }
+
+    const txtState =
+        document.getElementById(
+            "txtActiveRxState"
+        );
+
+    const txtCall =
+        document.getElementById(
+            "txtActiveRxCall"
+        );
+
+    const txtFrequency =
+        document.getElementById(
+            "txtActiveRxFrequency"
+        );
+
+    const txtSector =
+        document.getElementById(
+            "txtActiveRxSector"
+        );
+
+    const txtMode =
+        document.getElementById(
+            "txtActiveRxMode"
+        );
+
+    const txtType =
+        document.getElementById(
+            "txtActiveRxType"
+        );
+
+    const txtBandwidth =
+        document.getElementById(
+            "txtActiveRxBandwidth"
+        );
+
+    const frequency =
+        Number.parseFloat(
+            message.frequency
+        );
+
+    panel.classList.add(
+        "is-active"
+    );
+
+    if (txtState) {
+        txtState.textContent =
+            "RECEIVING";
+    }
+
+    if (txtCall) {
+        txtCall.textContent =
+            String(
+                message.from ||
+                message.callsign ||
+                "UNKNOWN"
+            ).toUpperCase();
+    }
+
+    if (txtFrequency) {
+        txtFrequency.textContent =
+            Number.isFinite(
+                frequency
+            )
+                ? `${frequency.toFixed(2)} Vt`
+                : "— Vt";
+    }
+
+    if (txtSector) {
+        txtSector.textContent =
+            String(
+                message.channelSector ||
+                message.sector ||
+                "—"
+            ).toUpperCase();
+    }
+
+    if (txtMode) {
+        txtMode.textContent =
+            String(
+                message.mode ||
+                "—"
+            ).toUpperCase();
+    }
+
+    if (txtType) {
+        txtType.textContent =
+            String(
+                message.transmissionKind ||
+                "AUDIO"
+            ).toUpperCase();
+    }
+
+    if (txtBandwidth) {
+        txtBandwidth.textContent =
+            String(
+                message.bandwidth ||
+                "—"
+            ).toUpperCase();
+    }
+
+    if (
+        activeRxClearTimer
+    ) {
+        clearTimeout(
+            activeRxClearTimer
+        );
+
+        activeRxClearTimer =
+            null;
+    }
+
+    /*
+     * Non-stream transmissions can automatically
+     * return to idle after their advertised duration.
+     *
+     * Streams are cleared by streamPlayer.js when
+     * playback actually finishes.
+     */
+    if (
+        options.autoClear !==
+            false
+    ) {
+        const durationMs =
+            Math.max(
+                500,
+                Number(
+                    message.durationMs
+                ) ||
+                2000
+            );
+
+        activeRxClearTimer =
+            setTimeout(
+                clearActiveRxPanel,
+                durationMs +
+                    250
+            );
+    }
+}
+
+function clearActiveRxPanel() {
+    const panel =
+        document.getElementById(
+            "activeRxPanel"
+        );
+
+    if (!panel) {
+        return;
+    }
+
+    const values = {
+        txtActiveRxState:
+            "NO SIGNAL",
+
+        txtActiveRxCall:
+            "—",
+
+        txtActiveRxFrequency:
+            "— Vt",
+
+        txtActiveRxSector:
+            "—",
+
+        txtActiveRxMode:
+            "—",
+
+        txtActiveRxType:
+            "—",
+
+        txtActiveRxBandwidth:
+            "—"
+    };
+
+    for (
+        const [
+            id,
+            value
+        ] of Object.entries(
+            values
+        )
+    ) {
+        const element =
+            document.getElementById(
+                id
+            );
+
+        if (element) {
+            element.textContent =
+                value;
+        }
+    }
+
+    panel.classList.remove(
+        "is-active"
+    );
+
+    if (
+        activeRxClearTimer
+    ) {
+        clearTimeout(
+            activeRxClearTimer
+        );
+
+        activeRxClearTimer =
+            null;
+    }
+}
+
 // ======================================================
 // Incoming message handling
 // ======================================================
@@ -1524,32 +1748,40 @@ case "welcome":
             break;
 
         case "channel-audio":
-        case "direct-audio":
-            if (
-                shouldReceiveNetworkTransmission(
-                    message
-                )
-            ) {
-                await receiveNetworkAudio(
-                    message
-                );
-            }
+case "direct-audio":
+    if (
+        shouldReceiveNetworkTransmission(
+            message
+        )
+    ) {
+        updateActiveRxPanel(
+            message
+        );
 
-            break;
+        await receiveNetworkAudio(
+            message
+        );
+    }
 
-        case "channel-ammef":
-        case "direct-ammef":
-            if (
-                shouldReceiveNetworkTransmission(
-                    message
-                )
-            ) {
-                await receiveNetworkAMMEF(
-                    message
-                );
-            }
+    break;
+            
+      case "channel-ammef":
+case "direct-ammef":
+    if (
+        shouldReceiveNetworkTransmission(
+            message
+        )
+    ) {
+        updateActiveRxPanel(
+            message
+        );
 
-            break;
+        await receiveNetworkAMMEF(
+            message
+        );
+    }
+
+    break;
 
         case "transmission-result":
             setNetworkStatus(
@@ -1587,6 +1819,19 @@ case "ammef-stream-end":
         typeof handleIncomingArNetStreamMessage ===
             "function"
     ) {
+        if (
+            message.type ===
+                "ammef-stream-start"
+        ) {
+            updateActiveRxPanel(
+                message,
+                {
+                    autoClear:
+                        false
+                }
+            );
+        }
+
         await handleIncomingArNetStreamMessage(
             message
         );
