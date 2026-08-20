@@ -901,6 +901,15 @@ function finishIncomingArNetStream(
 
     if (
     incomingArNetStreams.size ===
+        0 &&
+    typeof clearActiveRxPanel ===
+        "function"
+) {
+    clearActiveRxPanel();
+}
+
+    if (
+    incomingArNetStreams.size ===
     0
 ) {
     clearIncomingArNetStreamVisuals();
@@ -974,7 +983,13 @@ function stopAllIncomingArNetStreams() {
     ) {
         returnToReceiveMode();
     }
-}
+
+    if (
+    typeof clearActiveRxPanel ===
+        "function"
+) {
+    clearActiveRxPanel();
+} 
 
 // ======================================================
 // Status helper
