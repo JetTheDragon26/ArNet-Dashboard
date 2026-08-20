@@ -1318,4 +1318,5 @@ txtCallsign.addEventListener(
         "S"
     );
     
+ }
 }
