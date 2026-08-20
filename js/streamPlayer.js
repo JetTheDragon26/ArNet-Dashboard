@@ -926,7 +926,6 @@ function finishIncomingArNetStream(
     ) {
         returnToReceiveMode();
     }
-}
 
 function stopIncomingArNetStream(
     streamId
