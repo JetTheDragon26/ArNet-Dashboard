@@ -1380,3 +1380,120 @@ button:disabled {
 
     border-color: #478652;
 }
+
+/* ==================================================
+   Active RX panel
+================================================== */
+
+.arnet-active-rx {
+    margin-top: 6px;
+
+    background:
+        linear-gradient(
+            180deg,
+            #071009,
+            #030704
+        );
+
+    border:
+        1px solid #1d4426;
+
+    padding: 6px 8px;
+}
+
+.arnet-active-rx-header {
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items: center;
+
+    margin-bottom: 6px;
+
+    padding-bottom: 4px;
+
+    border-bottom:
+        1px solid #17351f;
+
+    color: #557c5d;
+
+    font-size: 8px;
+    font-weight: bold;
+
+    letter-spacing: 1px;
+}
+
+.arnet-active-rx-state {
+    color: #486850;
+}
+
+.arnet-active-rx.is-active
+.arnet-active-rx-state {
+    color: #9af0aa;
+
+    text-shadow:
+        0 0 5px
+        rgba(
+            100,
+            240,
+            130,
+            0.2
+        );
+}
+
+.arnet-active-rx-grid {
+    display: grid;
+
+    grid-template-columns:
+        1.2fr
+        1.2fr
+        0.7fr
+        0.8fr
+        0.8fr
+        0.8fr;
+
+    gap: 8px;
+}
+
+.arnet-active-rx-grid > div {
+    min-width: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 2px;
+}
+
+.arnet-active-rx-label {
+    color: #45644c;
+
+    font-size: 7px;
+
+    letter-spacing: 0.6px;
+}
+
+.arnet-active-rx-grid strong {
+    color: #82db92;
+
+    font-size: 10px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+}
+
+@media (
+    max-width: 750px
+) {
+    .arnet-active-rx-grid {
+        grid-template-columns:
+            repeat(
+                3,
+                1fr
+            );
+    }
+}
