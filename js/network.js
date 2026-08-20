@@ -1447,15 +1447,6 @@ async function handleNetworkMessage(
                                             signal.frequency
                                         ),
 
-                                        channelSector:
-    String(
-        signal.channelSector ||
-        signal.sector ||
-        "FCS"
-    )
-        .trim()
-        .toUpperCase(),
-
                                         String(
                                             signal.callsign ||
                                             "UNKNOWN"
@@ -1472,6 +1463,15 @@ async function handleNetworkMessage(
                                         signal.frequency
                                     ),
 
+                                channelSector:
+                                    String(
+                                        message.channelSector ||
+                                           message.sector ||
+                                            "FCS"
+                                                      )
+                                          .trim()
+                                          .toUpperCase(),
+                                
                                 callsign:
                                     String(
                                         signal.callsign ||
