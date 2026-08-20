@@ -1569,7 +1569,9 @@ function getFrequencyDecimalOffset() {
     );
 }
 
-function drawSignalMeter(amplitude) {
+function drawSignalMeter(
+    amplitude
+) {
     const width =
         canvasMeter.width;
 
@@ -1596,9 +1598,9 @@ function drawSignalMeter(amplitude) {
     );
 
     /*
-     * ==================================================
+     * ==========================================
      * BACKGROUND
-     * ==================================================
+     * ==========================================
      */
 
     meterCtx.fillStyle =
@@ -1611,9 +1613,6 @@ function drawSignalMeter(amplitude) {
         height
     );
 
-    /*
-     * Subtle inner frame.
-     */
     meterCtx.strokeStyle =
         "#18351E";
 
@@ -1629,9 +1628,9 @@ function drawSignalMeter(amplitude) {
 
 
     /*
-     * ==================================================
-     * SCALE ARC
-     * ==================================================
+     * ==========================================
+     * ARC GEOMETRY
+     * ==========================================
      */
 
     const startAngle =
@@ -1662,41 +1661,228 @@ function drawSignalMeter(amplitude) {
 
 
     /*
-     * ==================================================
-     * S-METER TICKS
-     * ==================================================
+     * ==========================================
+     * MODE CONFIGURATION
+     * ==========================================
      */
 
-    const scaleMarks = [
-        {
-            position: 0.00,
-            label: "1"
-        },
-        {
-            position: 0.16,
-            label: "3"
-        },
-        {
-            position: 0.32,
-            label: "5"
-        },
-        {
-            position: 0.48,
-            label: "7"
-        },
-        {
-            position: 0.64,
-            label: "9"
-        },
-        {
-            position: 0.82,
-            label: "+20"
-        },
-        {
-            position: 1.00,
-            label: "+60"
-        }
-    ];
+    const mode =
+        String(
+            currentMeterMode ||
+            "S"
+        )
+            .trim()
+            .toUpperCase();
+
+    let meterTitle =
+        "S";
+
+    let meterSubtitle =
+        "SIGNAL";
+
+    let scaleMarks =
+        [];
+
+    let redZoneStart =
+        0.78;
+
+    switch (
+        mode
+    ) {
+        case "RF":
+            meterTitle =
+                "RF";
+
+            meterSubtitle =
+                "OUTPUT %";
+
+            scaleMarks = [
+                {
+                    position: 0.00,
+                    label: "0"
+                },
+                {
+                    position: 0.25,
+                    label: "25"
+                },
+                {
+                    position: 0.50,
+                    label: "50"
+                },
+                {
+                    position: 0.75,
+                    label: "75"
+                },
+                {
+                    position: 1.00,
+                    label: "100"
+                }
+            ];
+
+            redZoneStart =
+                0.90;
+            break;
+
+
+        case "ALC":
+            meterTitle =
+                "ALC";
+
+            meterSubtitle =
+                "MODULATION";
+
+            scaleMarks = [
+                {
+                    position: 0.00,
+                    label: "0"
+                },
+                {
+                    position: 0.20,
+                    label: "2"
+                },
+                {
+                    position: 0.40,
+                    label: "4"
+                },
+                {
+                    position: 0.60,
+                    label: "6"
+                },
+                {
+                    position: 0.80,
+                    label: "8"
+                },
+                {
+                    position: 1.00,
+                    label: "10"
+                }
+            ];
+
+            redZoneStart =
+                0.75;
+            break;
+
+
+        case "COMP":
+            meterTitle =
+                "COMP";
+
+            meterSubtitle =
+                "GAIN REDUCTION";
+
+            scaleMarks = [
+                {
+                    position: 0.00,
+                    label: "0"
+                },
+                {
+                    position: 0.25,
+                    label: "5"
+                },
+                {
+                    position: 0.50,
+                    label: "10"
+                },
+                {
+                    position: 0.75,
+                    label: "15"
+                },
+                {
+                    position: 1.00,
+                    label: "20"
+                }
+            ];
+
+            redZoneStart =
+                0.82;
+            break;
+
+
+        case "SWR":
+            meterTitle =
+                "SWR";
+
+            meterSubtitle =
+                "LINK QUALITY";
+
+            scaleMarks = [
+                {
+                    position: 0.00,
+                    label: "1"
+                },
+                {
+                    position: 0.22,
+                    label: "1.5"
+                },
+                {
+                    position: 0.46,
+                    label: "2"
+                },
+                {
+                    position: 0.72,
+                    label: "3"
+                },
+                {
+                    position: 1.00,
+                    label: "∞"
+                }
+            ];
+
+            redZoneStart =
+                0.60;
+            break;
+
+
+        case "S":
+        default:
+            meterTitle =
+                "S";
+
+            meterSubtitle =
+                "SIGNAL";
+
+            scaleMarks = [
+                {
+                    position: 0.00,
+                    label: "1"
+                },
+                {
+                    position: 0.16,
+                    label: "3"
+                },
+                {
+                    position: 0.32,
+                    label: "5"
+                },
+                {
+                    position: 0.48,
+                    label: "7"
+                },
+                {
+                    position: 0.64,
+                    label: "9"
+                },
+                {
+                    position: 0.82,
+                    label: "+20"
+                },
+                {
+                    position: 1.00,
+                    label: "+60"
+                }
+            ];
+
+            redZoneStart =
+                0.78;
+            break;
+    }
+
+
+    /*
+     * ==========================================
+     * SCALE TICKS
+     * ==========================================
+     */
 
     meterCtx.textAlign =
         "center";
@@ -1718,53 +1904,53 @@ function drawSignalMeter(amplitude) {
                 mark.position
             );
 
-        const isHighSignal =
+        const isDanger =
             mark.position >=
-            0.82;
+            redZoneStart;
 
-        const tickOuterRadius =
+        const outerRadius =
             radius;
 
-        const tickInnerRadius =
-            isHighSignal
+        const innerRadius =
+            isDanger
                 ? radius - 9
                 : radius - 7;
 
         const x1 =
             centerX +
-            (
-                Math.cos(angle) *
-                tickInnerRadius
-            );
+            Math.cos(
+                angle
+            ) *
+            innerRadius;
 
         const y1 =
             pivotY +
-            (
-                Math.sin(angle) *
-                tickInnerRadius
-            );
+            Math.sin(
+                angle
+            ) *
+            innerRadius;
 
         const x2 =
             centerX +
-            (
-                Math.cos(angle) *
-                tickOuterRadius
-            );
+            Math.cos(
+                angle
+            ) *
+            outerRadius;
 
         const y2 =
             pivotY +
-            (
-                Math.sin(angle) *
-                tickOuterRadius
-            );
+            Math.sin(
+                angle
+            ) *
+            outerRadius;
 
         meterCtx.strokeStyle =
-            isHighSignal
+            isDanger
                 ? "#9C3B3B"
                 : "#5F8A68";
 
         meterCtx.lineWidth =
-            isHighSignal
+            isDanger
                 ? 1.5
                 : 1;
 
@@ -1782,25 +1968,30 @@ function drawSignalMeter(amplitude) {
 
         meterCtx.stroke();
 
+
+        /*
+         * Tick label.
+         */
+
         const labelRadius =
             radius - 17;
 
         const labelX =
             centerX +
-            (
-                Math.cos(angle) *
-                labelRadius
-            );
+            Math.cos(
+                angle
+            ) *
+            labelRadius;
 
         const labelY =
             pivotY +
-            (
-                Math.sin(angle) *
-                labelRadius
-            );
+            Math.sin(
+                angle
+            ) *
+            labelRadius;
 
         meterCtx.fillStyle =
-            isHighSignal
+            isDanger
                 ? "#C55B5B"
                 : "#78C786";
 
@@ -1819,19 +2010,19 @@ function drawSignalMeter(amplitude) {
 
 
     /*
-     * ==================================================
-     * RED HIGH-SIGNAL ARC
-     * ==================================================
+     * ==========================================
+     * RED ZONE ARC
+     * ==========================================
      */
 
-    const redStart =
+    const redStartAngle =
         startAngle +
         (
             (
                 endAngle -
                 startAngle
             ) *
-            0.78
+            redZoneStart
         );
 
     meterCtx.strokeStyle =
@@ -1846,7 +2037,7 @@ function drawSignalMeter(amplitude) {
         centerX,
         pivotY,
         radius,
-        redStart,
+        redStartAngle,
         endAngle
     );
 
@@ -1854,61 +2045,9 @@ function drawSignalMeter(amplitude) {
 
 
     /*
-     * ==================================================
-     * SECONDARY RF SCALE
-     * ==================================================
-     */
-
-    meterCtx.fillStyle =
-        "#496851";
-
-    meterCtx.font =
-        "7px Consolas";
-
-    meterCtx.fillText(
-        "RF",
-        20,
-        height - 18
-    );
-
-    const rfLabels = [
-    {
-        text: "0",
-        x: 48
-    },
-    {
-        text: "25",
-        x: 82
-    },
-    {
-        text: "50",
-        x: 120
-    },
-    {
-        text: "75",
-        x: 158
-    },
-    {
-        text: "100",
-        x: 198
-    }
-];
-    for (
-        const label of
-        rfLabels
-    ) {
-        meterCtx.fillText(
-            label.text,
-            label.x,
-            height - 18
-        );
-    }
-
-
-    /*
-     * ==================================================
-     * METER LABELS
-     * ==================================================
+     * ==========================================
+     * TITLE
+     * ==========================================
      */
 
     meterCtx.fillStyle =
@@ -1918,7 +2057,7 @@ function drawSignalMeter(amplitude) {
         "bold 9px Consolas";
 
     meterCtx.fillText(
-        "S",
+        meterTitle,
         centerX,
         15
     );
@@ -1930,16 +2069,16 @@ function drawSignalMeter(amplitude) {
         "7px Consolas";
 
     meterCtx.fillText(
-        "SIGNAL",
+        meterSubtitle,
         centerX,
         26
     );
 
 
     /*
-     * ==================================================
+     * ==========================================
      * NEEDLE
-     * ==================================================
+     * ==========================================
      */
 
     const normalizedAmplitude =
@@ -1947,7 +2086,9 @@ function drawSignalMeter(amplitude) {
             0,
             Math.min(
                 1,
-                Number(amplitude) ||
+                Number(
+                    amplitude
+                ) ||
                 0
             )
         );
@@ -1967,25 +2108,23 @@ function drawSignalMeter(amplitude) {
 
     const needleX =
         centerX +
-        (
-            Math.cos(
-                needleAngle
-            ) *
-            needleRadius
-        );
+        Math.cos(
+            needleAngle
+        ) *
+        needleRadius;
 
     const needleY =
         pivotY +
-        (
-            Math.sin(
-                needleAngle
-            ) *
-            needleRadius
-        );
+        Math.sin(
+            needleAngle
+        ) *
+        needleRadius;
+
 
     /*
-     * Soft needle shadow.
+     * Needle shadow.
      */
+
     meterCtx.strokeStyle =
         "rgba(0,0,0,0.7)";
 
@@ -2006,9 +2145,11 @@ function drawSignalMeter(amplitude) {
 
     meterCtx.stroke();
 
+
     /*
-     * Main needle.
+     * Needle.
      */
+
     meterCtx.strokeStyle =
         "#B7E8BF";
 
@@ -2031,9 +2172,9 @@ function drawSignalMeter(amplitude) {
 
 
     /*
-     * ==================================================
+     * ==========================================
      * PIVOT
-     * ==================================================
+     * ==========================================
      */
 
     meterCtx.fillStyle =
