@@ -280,6 +280,105 @@ function waterfallVtWidthToPixels(
     );
 }
 
+function getCurrentMeterValue(
+    amplitude
+) {
+    switch (
+        currentMeterMode
+    ) {
+        case "RF":
+            /*
+             * RF output meter.
+             * For now use TX amplitude.
+             */
+            if (
+                isRecording ||
+                isPlaying
+            ) {
+                return Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        amplitude
+                    )
+                );
+            }
+
+            return 0;
+
+        case "ALC":
+            /*
+             * Simulated ALC action.
+             * Only begins rising near high TX levels.
+             */
+            if (
+                isRecording ||
+                isPlaying
+            ) {
+                return Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        (
+                            amplitude -
+                            0.55
+                        ) /
+                        0.45
+                    )
+                );
+            }
+
+            return 0;
+
+        case "COMP":
+            /*
+             * Compression meter.
+             * Gives a modest reading during TX.
+             */
+            if (
+                isRecording ||
+                isPlaying
+            ) {
+                return Math.max(
+                    0,
+                    Math.min(
+                        1,
+                        amplitude *
+                            0.75
+                    )
+                );
+            }
+
+            return 0;
+
+        case "SWR":
+            /*
+             * Placeholder simulated SWR.
+             *
+             * We'll replace this later if ArNet gets
+             * an actual reflected-power model.
+             */
+            if (
+                isRecording ||
+                isPlaying
+            ) {
+                return 0.12;
+            }
+
+            return 0;
+
+        case "S":
+        default:
+            return Math.max(
+                0,
+                Math.min(
+                    1,
+                    amplitude
+                )
+            );
+    }
+}
+
 function isFrequencyInsideWaterfallBand(
     frequency
 ) {
@@ -3246,9 +3345,14 @@ function renderUIFrame() {
         comboMode.value ===
         "ABMTV";
 
-    drawSignalMeter(
+    const meterValue =
+    getCurrentMeterValue(
         amplitude
     );
+
+drawSignalMeter(
+    meterValue
+);
 
     drawFrequencyOffsetMeter();
 
