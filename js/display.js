@@ -2694,36 +2694,35 @@ function drawWaterfallRow(
         Date.now();
 
     /*
-     * Ignore old spectrum data if the relay has not sent
-     * an update recently.
+     * Remove expired network spectrum signals.
      */
-  if (
-    Array.isArray(
-        networkSpectrumSignals
-    )
-) {
-    networkSpectrumSignals =
-        networkSpectrumSignals
-            .filter(
-                signal =>
-                    Number(
-                        signal.expiresAt
-                    ) >
-                    now
-            );
-}
+    if (
+        Array.isArray(
+            networkSpectrumSignals
+        )
+    ) {
+        networkSpectrumSignals =
+            networkSpectrumSignals
+                .filter(
+                    signal =>
+                        Number(
+                            signal.expiresAt
+                        ) >
+                        now
+                );
+    }
 
-const activeSignals =
-    Array.isArray(
-        networkSpectrumSignals
-    )
-        ? networkSpectrumSignals
-        : [];
-    
+    const activeSignals =
+        Array.isArray(
+            networkSpectrumSignals
+        )
+            ? networkSpectrumSignals
+            : [];
+
     const tunedFrequency =
-    Number.parseFloat(
-        txtFrequency?.value
-    );
+        Number.parseFloat(
+            txtFrequency?.value
+        );
 
     const tunedX =
         frequencyToWaterfallX(
@@ -2731,15 +2730,132 @@ const activeSignals =
             wfWidth
         );
 
+    /*
+     * Determine the currently selected local sector.
+     */
+    const localSector =
+        String(
+            comboChannelSector?.value ||
+            "FCS"
+        )
+            .trim()
+            .toUpperCase();
+
+    /*
+     * Determine local TX sector boundaries.
+     */
+    let localSectorMin =
+        null;
+
+    let localSectorMax =
+        null;
+
+    if (
+        Number.isFinite(
+            tunedFrequency
+        )
+    ) {
+        const channel =
+            Math.floor(
+                tunedFrequency
+            );
+
+        switch (
+            localSector
+        ) {
+            case "LCS":
+                localSectorMin =
+                    channel +
+                    0.00;
+
+                localSectorMax =
+                    channel +
+                    0.50;
+                break;
+
+            case "UCS":
+                localSectorMin =
+                    channel +
+                    0.50;
+
+                localSectorMax =
+                    channel +
+                    0.99;
+                break;
+
+            case "FCS":
+            default:
+                localSectorMin =
+                    channel +
+                    0.00;
+
+                localSectorMax =
+                    channel +
+                    0.99;
+                break;
+        }
+    }
+
+    /*
+     * Convert local sector boundaries once instead
+     * of recalculating them for every pixel.
+     */
+    const localSectorLeftX =
+        Number.isFinite(
+            localSectorMin
+        )
+            ? frequencyToWaterfallX(
+                localSectorMin,
+                wfWidth
+            )
+            : null;
+
+    const localSectorRightX =
+        Number.isFinite(
+            localSectorMax
+        )
+            ? frequencyToWaterfallX(
+                localSectorMax,
+                wfWidth
+            )
+            : null;
+
+    const localSectorWidth =
+        (
+            Number.isFinite(
+                localSectorLeftX
+            ) &&
+            Number.isFinite(
+                localSectorRightX
+            )
+        )
+            ? Math.max(
+                1,
+                Math.abs(
+                    localSectorRightX -
+                    localSectorLeftX
+                )
+            )
+            : 1;
+
     for (
         let x = 0;
         x < wfWidth;
         x++
     ) {
+        /*
+         * Background noise.
+         */
         const noise =
-    0.018 +
-    Math.random() *
-    0.055;
+            0.018 +
+            Math.random() *
+                0.055;
+
+        /*
+         * ==================================================
+         * NETWORK SIGNALS
+         * ==================================================
+         */
 
         let networkIntensity =
             0;
@@ -2757,16 +2873,18 @@ const activeSignals =
             }
 
             networkIntensity +=
-    getNetworkSignalIntensity(
-        signal,
-        x
-    );
+                getNetworkSignalIntensity(
+                    signal,
+                    x
+                );
         }
 
         /*
-         * Show this dashboard's own local TX/audio activity
-         * even before the relay snapshot comes back.
+         * ==================================================
+         * LOCAL TRANSMITTER
+         * ==================================================
          */
+
         let localSignal =
             0;
 
@@ -2774,128 +2892,113 @@ const activeSignals =
             isTransmitting &&
             Number.isFinite(
                 tunedFrequency
+            ) &&
+            Number.isFinite(
+                localSectorLeftX
+            ) &&
+            Number.isFinite(
+                localSectorRightX
             )
         ) {
+            /*
+             * Hard pixel boundary.
+             *
+             * Anything outside the selected sector gets
+             * absolutely ZERO local TX intensity.
+             */
+            const insideSector =
+                x >=
+                    Math.min(
+                        localSectorLeftX,
+                        localSectorRightX
+                    ) &&
+                x <=
+                    Math.max(
+                        localSectorLeftX,
+                        localSectorRightX
+                    );
 
-           const localSector =
-    typeof getNetworkChannelSector ===
-        "function"
-        ? getNetworkChannelSector()
-        : "FCS";
+            if (
+                insideSector
+            ) {
+                const distance =
+                    Math.abs(
+                        x -
+                        tunedX
+                    );
 
-const channel =
-    Math.floor(
-        tunedFrequency
-    );
+                /*
+                 * Strongest near the TX frequency,
+                 * softer toward the sector edges.
+                 */
+                const normalizedDistance =
+                    Math.min(
+                        1,
+                        distance /
+                        Math.max(
+                            1,
+                            localSectorWidth *
+                                0.50
+                        )
+                    );
 
-let sectorMin;
-let sectorMax;
+                const peakShape =
+                    Math.cos(
+                        normalizedDistance *
+                        (
+                            Math.PI /
+                            2
+                        )
+                    );
 
-switch (
-    localSector
-) {
-    case "LCS":
-        sectorMin =
-            channel +
-            0.00;
+                /*
+                 * Different behavior for video if needed.
+                 */
+                let localModulation =
+                    1;
 
-        sectorMax =
-            channel +
-            0.50;
-        break;
+                if (
+                    isAbmtvMode
+                ) {
+                    localModulation =
+                        0.82 +
+                        Math.sin(
+                            now /
+                                70 +
+                            x *
+                                0.65
+                        ) *
+                            0.12;
+                }
+                else {
+                    localModulation =
+                        0.68 +
+                        Math.random() *
+                            0.32;
+                }
 
-    case "UCS":
-        sectorMin =
-            channel +
-            0.50;
+                /*
+                 * Sector floor makes the occupied portion
+                 * clearly visible while still allowing
+                 * the exact TX frequency to appear stronger.
+                 */
+                localSignal =
+                    amplitude *
+                    localModulation *
+                    (
+                        0.22 +
+                        peakShape *
+                            0.78
+                    );
+            }
+        }
 
-        sectorMax =
-            channel +
-            0.99;
-        break;
-
-    case "FCS":
-    default:
-        sectorMin =
-            channel +
-            0.00;
-
-        sectorMax =
-            channel +
-            0.99;
-        break;
-}
-
-const localLeftX =
-    frequencyToWaterfallX(
-        sectorMin,
-        wfWidth
-    );
-
-const localRightX =
-    frequencyToWaterfallX(
-        sectorMax,
-        wfWidth
-    );
-
-if (
-    x >=
-        Math.min(
-            localLeftX,
-            localRightX
-        ) &&
-    x <=
-        Math.max(
-            localLeftX,
-            localRightX
-        )
-) {
-    const sectorWidth =
-        Math.max(
-            1,
-            Math.abs(
-                localRightX -
-                localLeftX
-            )
-        );
-
-    const distance =
-        Math.abs(
-            x -
-            tunedX
-        );
-
-    const shape =
-        Math.cos(
-            Math.min(
-                1,
-                distance /
-                (
-                    sectorWidth *
-                    0.55
-                )
-            ) *
-            (
-                Math.PI /
-                2
-            )
-        );
-
-    localSignal =
-        amplitude *
-        (
-            0.20 +
-            shape *
-                0.80
-        );
-}
-            
-}
-            
         /*
-         * Faint tuned-frequency marker. This is deliberately
-         * weaker than a real transmission.
+         * ==================================================
+         * TUNED-FREQUENCY MARKER
+         * ==================================================
          */
+
         const tunedMarker =
             Math.abs(
                 x -
@@ -2905,6 +3008,12 @@ if (
                 ? 0.09
                 : 0;
 
+        /*
+         * ==================================================
+         * TOTAL INTENSITY
+         * ==================================================
+         */
+
         const totalIntensity =
             Math.min(
                 1,
@@ -2913,6 +3022,12 @@ if (
                 localSignal +
                 tunedMarker
             );
+
+        /*
+         * ==================================================
+         * WATERFALL COLOR
+         * ==================================================
+         */
 
         const blue =
             totalIntensity >
@@ -2980,7 +3095,6 @@ if (
             255;
     }
 }
-
 /**
  * Draws the waterfall display.
  *
