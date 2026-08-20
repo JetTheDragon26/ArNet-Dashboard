@@ -1089,6 +1089,12 @@ async function transmitPreparedArNetStream() {
                         txtFrequency.value
                     ),
 
+            channelSector:
+    typeof getNetworkChannelSector ===
+        "function"
+        ? getNetworkChannelSector()
+        : "FCS",
+
             mode:
                 comboMode.value,
 
@@ -1192,6 +1198,12 @@ async function transmitPreparedArNetStream() {
                                 txtFrequency.value
                             ),
 
+                    channelSector:
+    typeof getNetworkChannelSector ===
+        "function"
+        ? getNetworkChannelSector()
+        : "FCS",
+                    
                     mode:
                         comboMode.value,
 
